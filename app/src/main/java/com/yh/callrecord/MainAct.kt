@@ -5,6 +5,8 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import com.codezjx.andlinker.AndLinker
+import com.yh.recordlib.CallRecordController
+import com.yh.recordlib.ISyncCallback
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.ext.queryLastRecord
@@ -51,6 +53,17 @@ class MainAct : Activity(),
         if(null != savedInstanceState && savedInstanceState.containsKey(Constants.EXTRA_LAST_RECORD_ID)) {
             mLastRecordId = savedInstanceState.getString(Constants.EXTRA_LAST_RECORD_ID)
         }
+        
+        CallRecordController.get()
+            .registerRecordSyncListener(object : ISyncCallback {
+                override fun onSuncFail(recordId: String) {
+                    Timber.d("onSuncFail: $recordId")
+                }
+                
+                override fun onSyncSuccess(recordId: String) {
+                    Timber.d("onSyncSuccess: $recordId")
+                }
+            })
         
         mLinker.bind()
         
@@ -100,7 +113,6 @@ class MainAct : Activity(),
     
     override fun onBind() {
         if(mBindSuccess.compareAndSet(false, true)) {
-            mBindSuccess.set(true)
             mRecordService = mLinker.create(IRecordService::class.java)
             if(null != mLastRecordId) {
                 mRecordService?.resumeLastRecord(mLastRecordId!!)

@@ -16,6 +16,7 @@ import com.yh.recordlib.entity.SystemCallRecord
 import com.yh.recordlib.ext.findAllUnSyncRecords
 import com.yh.recordlib.ext.findRecordById
 import com.yh.recordlib.ext.parseSystemCallRecords
+import com.yh.recordlib.notifier.RecordSyncNotifier
 import timber.log.Timber
 
 /**
@@ -144,20 +145,21 @@ class SyncCallService : JobIntentService() {
                         }
                     }
                     if(allUnSyncRecords.isNotEmpty()) {
-                        markNoMappingRecord(allUnSyncRecords)
                         Timber.e("syncAllRecord: Failed to sync successfully: $allUnSyncRecords")
+                        markNoMappingRecord(allUnSyncRecords)
                     }
                     Timber.w("syncAllRecord: $syncedCount records have been synchronized done!!")
                 } else {
-                    markNoMappingRecord(allUnSyncRecords)
                     Timber.e("syncAllRecord: Not found sys mapping record!!")
+                    markNoMappingRecord(allUnSyncRecords)
                 }
             }, failAction = {
-                markNoMappingRecord(allUnSyncRecords)
                 Timber.e("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!")
+                markNoMappingRecord(allUnSyncRecords)
             })
         } catch(e: Exception) {
             Timber.e(e)
+            markNoMappingRecord(allUnSyncRecords)
         } finally {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 callLogClient.close()
@@ -176,6 +178,8 @@ class SyncCallService : JobIntentService() {
             it.isNoMapping = true
             it.save()
         }
+    
+        RecordSyncNotifier.get().notifyRecordSyncStatus(allUnSyncRecords)
     }
     
     private fun precisionFilter(
@@ -301,8 +305,8 @@ class SyncCallService : JobIntentService() {
             
             callLogResult.parseSystemCallRecords(successAction = { records ->
                 if(records.isNotEmpty()) {
-                    syncRecordBySys(recordCall, records[0])
                     Timber.d("syncTargetRecord: recordCall -> $recordCall")
+                    syncRecordBySys(recordCall, records[0])
                 } else {
                     Timber.w("syncTargetRecord: Not found sys mapping record!! -> $recordCall")
                     markNoMappingRecord(arrayListOf(recordCall))
@@ -317,6 +321,7 @@ class SyncCallService : JobIntentService() {
             })
         } catch(e: Exception) {
             Timber.e(e)
+            markNoMappingRecord(arrayListOf(recordCall))
         } finally {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 callLogClient.close()
@@ -346,6 +351,8 @@ class SyncCallService : JobIntentService() {
         callRecord.isNoMapping = false
         
         callRecord.save()
+        
+        RecordSyncNotifier.get().notifyRecordSyncStatus(arrayListOf(callRecord))
     }
     
     override fun onDestroy() {

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
 import com.yh.recordlib.cons.Constants
+import com.yh.recordlib.notifier.RecordSyncNotifier
 import com.yh.recordlib.service.SyncCallService
 import io.realm.Realm
 import io.realm.RealmConfiguration
@@ -55,8 +56,10 @@ class CallRecordController private constructor(
         }
     }
     
-    private val mHandlerThread: HandlerThread = HandlerThread("CallRecordController")
+    private val mHandlerThread: HandlerThread = HandlerThread("Thread-CallRecordController")
     private val mHandler: Handler
+    
+    private val mRecordSyncNotifier: RecordSyncNotifier by lazy { RecordSyncNotifier.get() }
     
     init {
         mHandlerThread.start()
@@ -88,5 +91,13 @@ class CallRecordController private constructor(
         }
         work.putExtra(Constants.EXTRA_RETRY, retryCount.inc())
         mHandler.postDelayed({ SyncCallService.enqueueWork(application, work) }, mSyncRetryTime)
+    }
+    
+    fun registerRecordSyncListener(iSyncCallback: ISyncCallback) {
+        mRecordSyncNotifier.register(iSyncCallback)
+    }
+    
+    fun unRegisterRecordSyncListener(iSyncCallback: ISyncCallback) {
+        mRecordSyncNotifier.unRegister(iSyncCallback)
     }
 }
