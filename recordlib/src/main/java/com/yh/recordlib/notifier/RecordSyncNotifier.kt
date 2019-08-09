@@ -11,8 +11,10 @@ import com.yh.recordlib.entity.CallRecord
 class RecordSyncNotifier private constructor() {
     
     companion object {
+        @JvmStatic
         private var mInstances: RecordSyncNotifier? = null
-        
+
+        @JvmStatic
         @Synchronized
         fun get(): RecordSyncNotifier {
             if(null == mInstances) {

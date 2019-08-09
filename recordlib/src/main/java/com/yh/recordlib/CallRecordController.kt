@@ -26,10 +26,21 @@ class CallRecordController private constructor(
 ) {
     
     companion object {
+        @JvmStatic
         private var mInstances: CallRecordController? = null
-        
+
         @Synchronized
-        fun get(
+        @JvmStatic
+        fun get(): CallRecordController {
+            if(null == mInstances) {
+                throw Exception("CallRecordController not yet!")
+            }
+            return mInstances!!
+        }
+
+        @Synchronized
+        @JvmStatic
+        fun initialization(
             ctx: Application? = null,
             needInitSync: Boolean = false,
             dbFileName: String = "CallRecord.realm",

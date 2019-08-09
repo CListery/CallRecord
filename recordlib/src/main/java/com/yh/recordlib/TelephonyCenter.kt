@@ -21,12 +21,13 @@ import timber.log.Timber
  *
  * 某些低版本单卡设备在保存卡二时 subid 会大于等于 2
  */
-@Suppress("MemberVisibilityCanBePrivate")
 class TelephonyCenter private constructor() {
     
     companion object {
+        @JvmStatic
         private var mInstance: TelephonyCenter? = null
         
+        @JvmStatic
         @Synchronized
         fun get(): TelephonyCenter {
             if(null == mInstance) {
@@ -34,7 +35,8 @@ class TelephonyCenter private constructor() {
             }
             return mInstance!!
         }
-        
+
+        @JvmStatic
         private fun getStringArray(
             @ArrayRes
             id: Int

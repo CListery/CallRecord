@@ -16,9 +16,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MediaRecordHelper(private val mCtx: Application) {
     
     companion object {
-        
+
+        @JvmStatic
         private var mInstance: MediaRecordHelper? = null
-        
+
+        @JvmStatic
         @Synchronized
         fun get(ctx: Application): MediaRecordHelper {
             if(null == mInstance) {

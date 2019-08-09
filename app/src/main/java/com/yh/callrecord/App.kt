@@ -20,8 +20,10 @@ class App : Application() {
     private var mCRM: CallRecordController? = null
     
     companion object {
+        @JvmStatic
         private var mApplicationCtx: App? = null
-        
+
+        @JvmStatic
         fun get(): App {
             return mApplicationCtx!!
         }
@@ -52,7 +54,7 @@ class App : Application() {
             return
         }
         
-        mCRM = CallRecordController.get(
+        mCRM = CallRecordController.initialization(
             ctx = mApplicationCtx!!,
             needInitSync = false,
             dbFileName = BuildConfig.CALL_RECORD_DB,

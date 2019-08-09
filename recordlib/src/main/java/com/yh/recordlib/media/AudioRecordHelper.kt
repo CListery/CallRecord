@@ -18,9 +18,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 class AudioRecordHelper(private val mCtx: Application) {
     
     companion object {
-        
+
+        @JvmStatic
         private var mInstance: AudioRecordHelper? = null
-        
+
+        @JvmStatic
         @Synchronized
         fun get(ctx: Application): AudioRecordHelper {
             if(null == mInstance) {

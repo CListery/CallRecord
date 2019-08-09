@@ -29,7 +29,8 @@ class SyncCallService : JobIntentService() {
          * Unique job ID for this service.
          */
         private const val JOB_ID = 10001
-        
+
+        @JvmStatic
         fun enqueueWork(context: Context, recordId: String?) {
             if(null != recordId) {
                 enqueueWork(context, Intent().putExtra(Constants.EXTRA_LAST_RECORD_ID, recordId))
@@ -37,7 +38,8 @@ class SyncCallService : JobIntentService() {
                 enqueueWork(context)
             }
         }
-        
+
+        @JvmStatic
         fun enqueueWork(context: Context, work: Intent = Intent()) {
             Timber.w("enqueueWork: $context - $work")
             enqueueWork(context, SyncCallService::class.java, JOB_ID, work)

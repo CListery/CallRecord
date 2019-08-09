@@ -26,7 +26,9 @@ import timber.log.Timber
 class RecordCallService : Service() {
     
     companion object {
+        @JvmStatic
         private var mCurrentState = TelephonyManager.CALL_STATE_IDLE
+        @JvmStatic
         private var mLastRecordId: String? = null
     }
     
