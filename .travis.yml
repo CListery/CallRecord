@@ -26,6 +26,11 @@ android:
     - extra-android-support
     - extra-android-m2repository
 
+# Command to run
+script:
+  - ./gradlew clean
+  - ./gradlew :recordlib:build
+
 notifications:
   email: false
 
@@ -33,17 +38,12 @@ notifications:
 sudo: false
 
 # Caching: https://docs.travis-ci.com/user/languages/android/#Default-Test-Command-for-Gradle
-#before_cache:
-#  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
-#  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 
 #cache:
-#  directories:
-#    - $HOME/.gradle/caches/
-#    - $HOME/.gradle/wrapper/
-#    - $HOME/.android/build-cache
-
-# Command to run
-script:
-  - ./gradlew clean
-  - ./gradlew assembleDebug
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+    - $HOME/.android/build-cache
