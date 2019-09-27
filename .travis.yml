@@ -21,7 +21,9 @@ android:
     - extra-android-m2repository
 
 # Command to run
-script: ./gradlew :recordlib:build
+script:
+  - ./gradlew clean
+  - ./gradlew build
 
 notifications:
   email: false
