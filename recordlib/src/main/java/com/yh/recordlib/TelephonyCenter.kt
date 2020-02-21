@@ -1,5 +1,6 @@
 package com.yh.recordlib
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -13,6 +14,7 @@ import com.android.internal.telephony.IPhoneSubInfo
 import com.android.internal.telephony.ITelephony
 import com.android.internal.telephony.ITelephonyRegistry
 import com.yh.recordlib.cons.TelephonyProperties
+import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.lang.InvalidSubscriberIdException
 import timber.log.Timber
 
@@ -21,14 +23,17 @@ import timber.log.Timber
  *
  * 某些低版本单卡设备在保存卡二时 subid 会大于等于 2
  */
+@Suppress("MemberVisibilityCanBePrivate", "unused")
 class TelephonyCenter private constructor() {
-    
+
     companion object {
+        private const val TAG = "TelephonyCenter"
+
         @JvmStatic
         private var mInstance: TelephonyCenter? = null
-        
-        @JvmStatic
+
         @Synchronized
+        @JvmStatic
         fun get(): TelephonyCenter {
             if(null == mInstance) {
                 mInstance = TelephonyCenter()
@@ -45,45 +50,45 @@ class TelephonyCenter private constructor() {
                 .application.resources.getStringArray(id)
         }
     }
-    
+
     enum class SimOperator(val operatorName: String, val operatorArray: Array<String>) {
         ChinaTELECOM("中国电信", getStringArray(R.array.MCCMNC_China_TELECOM)),
         ChinaMOBILE("中国移动", getStringArray(R.array.MCCMNC_China_MOBILE)),
         ChinaUNICOM("中国联通", getStringArray(R.array.MCCMNC_China_UNICOM)),
         ChinaTieTong("中移铁通", getStringArray(R.array.MCCMNC_China_Tietong)),
         Unknown("未知运营商", arrayOf());
-        
+
         var mccMnc: String = "unknown"
     }
-    
-    /** Enum indicating multisim variants
+
+    /**
+     * Enum indicating multisim variants
      *  DSDS - Dual SIM Dual Standby
      *  DSDA - Dual SIM Dual Active
      *  TSTS - Triple SIM Triple Standby
-     **/
-    /** @hide
+     * @hide
      */
     enum class MultiSimVariants {
-        
+
         DSDS,
         DSDA,
         TSTS,
         UNKNOWN
     }
-    
+
     private val mTM: TelephonyManager? = CallRecordController.get().application.getSystemService(
         Context.TELEPHONY_SERVICE
     ) as? TelephonyManager
     private val mITelephony: ITelephony?
     private val mIPhoneSubInfo: IPhoneSubInfo?
     private val mITelephonyRegister: ITelephonyRegistry?
-    
+
     init {
         mITelephony = initITelephony()
         mIPhoneSubInfo = initIPhoneSubInfo()
         mITelephonyRegister = initITelephonyRegister()
     }
-    
+
     private fun initITelephony(): ITelephony? {
         var iTelephony: ITelephony? = ITelephony.Stub.asInterface(ServiceManager.getService(Context.TELEPHONY_SERVICE))
         if(null != iTelephony) {
@@ -100,12 +105,10 @@ class TelephonyCenter private constructor() {
         }
         return iTelephony
     }
-    
+
     private fun initIPhoneSubInfo(): IPhoneSubInfo? {
         var iPhoneSubInfo: IPhoneSubInfo? = IPhoneSubInfo.Stub.asInterface(
-            ServiceManager.getService(
-                "iphonesubinfo"
-            )
+            ServiceManager.getService("iphonesubinfo")
         )
         if(null != iPhoneSubInfo) {
             Timber.w("initIPhoneSubInfo DONE! -> $iPhoneSubInfo")
@@ -121,7 +124,8 @@ class TelephonyCenter private constructor() {
         }
         return iPhoneSubInfo
     }
-    
+
+    @SuppressLint("PrivateApi")
     private fun initITelephonyRegister(): ITelephonyRegistry? {
         var iTelephonyRegistry: ITelephonyRegistry? = ITelephonyRegistry.Stub.asInterface(
             ServiceManager.getService("telephony.registry")
@@ -140,19 +144,19 @@ class TelephonyCenter private constructor() {
         }
         return iTelephonyRegistry
     }
-    
+
     fun getTM() = mTM
     fun getITelephony() = mITelephony
     fun getSubscriberInfo() = mIPhoneSubInfo
     fun getTelephonyRegistry() = mITelephonyRegister
-    
+
     /**
      * 获取运营商，默认获取卡一
      */
     fun getSimOperator(phoneId: Int = 0): SimOperator {
         return parseSimOperator(getMccMncBySubscriptionId(phoneId))
     }
-    
+
     /**
      * 获取 MCCMNC，默认获取卡一
      */
@@ -167,7 +171,7 @@ class TelephonyCenter private constructor() {
                 mccMnc = values[phoneId]
             }
         }
-        
+
         if(TextUtils.isEmpty(mccMnc)) {
             val subscriptionId = getValidPhoneIdBySubid(phoneId)
             mccMnc = when(subscriptionId) {
@@ -182,7 +186,7 @@ class TelephonyCenter private constructor() {
         }
         return if(TextUtils.isEmpty(mccMnc)) defaultVal else mccMnc
     }
-    
+
     /**
      * 获取设备上所有SIM卡运营商
      */
@@ -195,7 +199,7 @@ class TelephonyCenter private constructor() {
                     allMccMnc.add(it)
                 }
         }
-        
+
         //某些低版本的机器会支持双卡，但不是Android原生支持
         if(allMccMnc.size < 2) {
             var sim1MccMnc = SystemProperties.get(
@@ -204,7 +208,7 @@ class TelephonyCenter private constructor() {
             var sim2MccMnc = SystemProperties.get(
                 TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC + ".2", ""
             )
-            
+
             if(null == allMccMnc.getOrNull(0)) {
                 if(TextUtils.isEmpty(sim1MccMnc)) {
                     sim1MccMnc = getIccSerialNumber(0)
@@ -213,7 +217,7 @@ class TelephonyCenter private constructor() {
             } else if(!allMccMnc.contains(sim1MccMnc)) {
                 allMccMnc.add(0, sim1MccMnc)
             }
-            
+
             if(null == allMccMnc.getOrNull(1)) {
                 if(TextUtils.isEmpty(sim1MccMnc)) {
                     sim2MccMnc = getIccSerialNumber(2)
@@ -232,7 +236,7 @@ class TelephonyCenter private constructor() {
         }
         return arrayListOf()
     }
-    
+
     /**
      * 通过 MCCMNC or ICCID 解析运营商
      */
@@ -265,16 +269,19 @@ class TelephonyCenter private constructor() {
             return SimOperator.Unknown.apply { this.mccMnc = origin }
         }
     }
-    
+
     fun getMultiSimConfiguration(): MultiSimVariants {
-        return when(SystemProperties.get(TelephonyProperties.PROPERTY_MULTI_SIM_CONFIG)) {
-            "dsds" -> MultiSimVariants.DSDS
-            "dsda" -> MultiSimVariants.DSDA
-            "tsts" -> MultiSimVariants.TSTS
-            else -> MultiSimVariants.UNKNOWN
-        }
+        val proMultiSimConfig = SystemProperties.get(TelephonyProperties.PROPERTY_MULTI_SIM_CONFIG)
+        return MultiSimVariants.values().find { it.name.equals(proMultiSimConfig, true) }
+            ?: MultiSimVariants.UNKNOWN
+//        return when(SystemProperties.get(TelephonyProperties.PROPERTY_MULTI_SIM_CONFIG)) {
+//            "dsds" -> MultiSimVariants.DSDS
+//            "dsda" -> MultiSimVariants.DSDA
+//            "tsts" -> MultiSimVariants.TSTS
+//            else -> MultiSimVariants.UNKNOWN
+//        }
     }
-    
+
     /**
      * Returns the number of phones available.
      * Returns 0 if none of voice, sms, data is not supported
@@ -288,7 +295,7 @@ class TelephonyCenter private constructor() {
             MultiSimVariants.TSTS -> TelephonyProperties.MAX_PHONE_COUNT_TRI_SIM
         }
     }
-    
+
     /**
      * SDK<21
      *     Returns the phone number string for line 1, for example, the MSISDN
@@ -308,7 +315,7 @@ class TelephonyCenter private constructor() {
                     subscriptionId, CallRecordController.get().application.packageName
                 ) ?: ""
             }
-            
+
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> {
                 val clazz = IPhoneSubInfo::class.java
                 val method = clazz.getDeclaredMethod(
@@ -318,7 +325,7 @@ class TelephonyCenter private constructor() {
                 val result = method.invoke(getSubscriberInfo(), subscriptionId)
                 result as? String ?: ""
             }
-            
+
             else -> {
                 val clazz = IPhoneSubInfo::class.java
                 val method = clazz.getDeclaredMethod("getLine1Number")
@@ -328,7 +335,7 @@ class TelephonyCenter private constructor() {
             }
         }
     }
-    
+
     /**
      * SDK<21
      *     Returns the serial number of the SIM, if applicable. Return null if it is unavailable.
@@ -346,7 +353,7 @@ class TelephonyCenter private constructor() {
                     subscriptionId, CallRecordController.get().application.packageName
                 ) ?: ""
             }
-            
+
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> {
                 val clazz = IPhoneSubInfo::class.java
                 val method = clazz.getDeclaredMethod(
@@ -356,7 +363,7 @@ class TelephonyCenter private constructor() {
                 val result = method.invoke(getSubscriberInfo(), subscriptionId)
                 result as? String ?: ""
             }
-            
+
             else -> {
                 var result: String?
                 if(subscriptionId > 0) {
@@ -379,10 +386,10 @@ class TelephonyCenter private constructor() {
             }
         }
     }
-    
+
     fun getValidPhoneIdBySubid(subId: Int?): Int {
         val phoneId = subId ?: 0
-        
+
         val max = getPhoneCount()
         return if(0 <= max) {
             if(phoneId > 1) {
@@ -398,7 +405,7 @@ class TelephonyCenter private constructor() {
             }
         }
     }
-    
+
     private fun isValidPhoneId(phoneId: Int): Boolean {
         val max = getPhoneCount()
         if(phoneId >= max) {
@@ -411,10 +418,20 @@ class TelephonyCenter private constructor() {
         }
         return true
     }
-    
-    fun call(context: Context, callNumber: String) {
+
+    fun call(context: Context, callNumber: String?, iRecordService: IRecordService?) {
+        if(null == callNumber || null == iRecordService) {
+            Timber.w("call fail!")
+            return
+        }
+        iRecordService.startListen()
         val intent = Intent(Intent.ACTION_DIAL)
-        intent.data = Uri.parse("tel:$callNumber")
+        intent.data =
+            if(BuildConfig.ENABLE_DEBUG && TextUtils.equals("debug", BuildConfig.BUILD_TYPE)) {
+                Uri.parse("tel:10010")
+            } else {
+                Uri.parse("tel:$callNumber")
+            }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }

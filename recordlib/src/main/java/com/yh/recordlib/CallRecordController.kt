@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
 import com.yh.recordlib.cons.Constants
+import com.yh.recordlib.entity.LibraryRealmModule
 import com.yh.recordlib.notifier.RecordSyncNotifier
 import com.yh.recordlib.service.SyncCallService
 import io.realm.Realm
@@ -43,7 +44,7 @@ class CallRecordController private constructor(
         fun initialization(
             ctx: Application? = null,
             needInitSync: Boolean = false,
-            dbFileName: String = "CallRecord.realm",
+            dbFileName: () -> String = { "CallRecord.realm" },
             dbVersion: Long = 1L,
             migration: (() -> RealmMigration)? = null,
             syncRetryTime: Long = BuildConfig.CALL_RECORD_RETRY_TIME,
@@ -56,7 +57,7 @@ class CallRecordController private constructor(
                 mInstances = CallRecordController(
                     ctx,
                     needInitSync,
-                    dbFileName,
+                    dbFileName.invoke(),
                     dbVersion,
                     migration?.invoke(),
                     syncRetryTime,
@@ -66,19 +67,24 @@ class CallRecordController private constructor(
             return mInstances!!
         }
     }
-    
+
     private val mHandlerThread: HandlerThread = HandlerThread("Thread-CallRecordController")
     private val mHandler: Handler
-    
+
     private val mRecordSyncNotifier: RecordSyncNotifier by lazy { RecordSyncNotifier.get() }
-    
+
     init {
         mHandlerThread.start()
         mHandler = Handler(mHandlerThread.looper)
-        
+
+        if(BuildConfig.ENABLE_DEBUG && 0 == Timber.treeCount()) {
+            Timber.plant(Timber.DebugTree())
+        }
+
         Realm.init(application)
         val builder = RealmConfiguration.Builder()
             .name(mDBFileName)
+            .modules(Realm.getDefaultModule(), LibraryRealmModule())
             .schemaVersion(mDBVersion)
         if(null == mMigration) {
             builder.deleteRealmIfMigrationNeeded()

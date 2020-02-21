@@ -6,5 +6,5 @@ package com.yh.recordlib
 interface ISyncCallback {
     
     fun onSyncSuccess(recordId: String) {}
-    fun onSuncFail(recordId: String) {}
+    fun onSyncFail(recordId: String) {}
 }

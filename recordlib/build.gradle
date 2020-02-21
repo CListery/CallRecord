@@ -11,8 +11,8 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -24,9 +24,22 @@ android {
 
     buildTypes {
         release {
-            multiDexKeepProguard file('multidex-config.pro')
+            debuggable = false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField('boolean', 'ENABLE_DEBUG', 'false')
+        }
+        debug {
+            debuggable = true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField('boolean', 'ENABLE_DEBUG', 'true')
+        }
+        dev {
+            debuggable = true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField('boolean', 'ENABLE_DEBUG', 'true')
         }
     }
 

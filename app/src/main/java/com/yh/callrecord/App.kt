@@ -57,7 +57,7 @@ class App : Application() {
         mCRM = CallRecordController.initialization(
             ctx = mApplicationCtx!!,
             needInitSync = false,
-            dbFileName = BuildConfig.CALL_RECORD_DB,
+            dbFileName = { BuildConfig.CALL_RECORD_DB },
             dbVersion = BuildConfig.RECORD_DB_VERSION,
             migration = { CallRecordDBMigration() },
             maxRetryCount = BuildConfig.MAX_RETRY_SYNC_RECORD_COUNT

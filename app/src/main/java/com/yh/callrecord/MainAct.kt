@@ -9,6 +9,7 @@ import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.ISyncCallback
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
+import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.ext.queryLastRecord
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
@@ -56,8 +57,8 @@ class MainAct : Activity(),
         
         CallRecordController.get()
             .registerRecordSyncListener(object : ISyncCallback {
-                override fun onSuncFail(recordId: String) {
-                    Timber.d("onSuncFail: $recordId")
+                override fun onSyncFail(recordId: String) {
+                    Timber.d("onSyncFail: $recordId")
                 }
                 
                 override fun onSyncSuccess(recordId: String) {
@@ -71,9 +72,8 @@ class MainAct : Activity(),
             SyncCallService.enqueueWork(application)
         }
         mCallBtn?.setOnClickListener {
-            mRecordService?.startListen()
             TelephonyCenter.get()
-                .call(this, "10010")
+                .call(this, "10010", mRecordService)
         }
         mGetMCCMNC?.setOnClickListener {
             Timber.w("-> ${TelephonyCenter.get().getSimOperator().operatorName}")

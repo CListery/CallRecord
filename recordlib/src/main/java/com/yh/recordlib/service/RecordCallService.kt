@@ -9,6 +9,7 @@ import android.telephony.TelephonyManager
 import android.text.TextUtils
 import com.codezjx.andlinker.AndLinkerBinder
 import com.vicpin.krealmextensions.save
+import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.entity.FakeCallRecord

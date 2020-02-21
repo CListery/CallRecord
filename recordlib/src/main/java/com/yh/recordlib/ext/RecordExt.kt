@@ -8,7 +8,6 @@ import timber.log.Timber
 /**
  * Created by CYH on 2019-05-30 14:20
  */
-
 fun findRecordById(recordId: String): CallRecord? {
     return querySorted<CallRecord>("callStartTime", Sort.DESCENDING) {
         equalTo("recordId", recordId)
@@ -17,8 +16,7 @@ fun findRecordById(recordId: String): CallRecord? {
 
 fun findAllUnSyncRecords(): List<CallRecord>? {
     return querySorted("callStartTime", Sort.DESCENDING) {
-        equalTo("synced", false).and()
-            .equalTo("isDeleted", false)
+        equalTo("synced", false).and().equalTo("isDeleted", false)
     }
 }
 
@@ -30,4 +28,3 @@ fun queryLastRecord(): CallRecord? {
     }
     return null
 }
-

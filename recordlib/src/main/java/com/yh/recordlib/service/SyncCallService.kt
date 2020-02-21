@@ -1,17 +1,20 @@
 package com.yh.recordlib.service
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.CallLog
 import android.support.v4.app.JobIntentService
 import android.text.TextUtils
+import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.save
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
+import com.yh.recordlib.entity.FakeCallRecord
 import com.yh.recordlib.entity.SystemCallRecord
 import com.yh.recordlib.ext.findAllUnSyncRecords
 import com.yh.recordlib.ext.findRecordById
@@ -100,7 +103,9 @@ class SyncCallService : JobIntentService() {
                 lastCallEndTime.plus(BuildConfig.MAX_CALL_TIME_OFFSET).toString()
             )
             val sort = CallLog.Calls.DEFAULT_SORT_ORDER
-            
+    
+            @SuppressLint("Recycle")
+            // close by #parseSystemCallRecords
             val callLogResult = callLogClient.query(
                 CallLog.Calls.CONTENT_URI,
                 null,
@@ -166,7 +171,7 @@ class SyncCallService : JobIntentService() {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 callLogClient.close()
             } else {
-                callLogClient.release()
+                @Suppress("DEPRECATION") callLogClient.release()
             }
         }
     }
@@ -180,7 +185,7 @@ class SyncCallService : JobIntentService() {
             it.isNoMapping = true
             it.save()
         }
-    
+
         RecordSyncNotifier.get().notifyRecordSyncStatus(allUnSyncRecords)
     }
     
@@ -295,7 +300,9 @@ class SyncCallService : JobIntentService() {
             }
             
             val sort = "${CallLog.Calls.DEFAULT_SORT_ORDER} LIMIT 1"
-            
+    
+            @SuppressLint("Recycle")
+            // close by #parseSystemCallRecords
             val callLogResult = callLogClient.query(
                 CallLog.Calls.CONTENT_URI,
                 null,
@@ -328,7 +335,7 @@ class SyncCallService : JobIntentService() {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 callLogClient.close()
             } else {
-                callLogClient.release()
+                @Suppress("DEPRECATION") callLogClient.release()
             }
         }
     }
@@ -343,6 +350,7 @@ class SyncCallService : JobIntentService() {
         
         Timber.d("syncRecordBySys: ${callRecord.isFake} ${systemCallRecord.phoneNumber}")
         if(callRecord.isFake && systemCallRecord.phoneNumber.isNotEmpty()) {
+            delete<FakeCallRecord> { equalTo("recordId", callRecord.recordId) }
             callRecord.isFake = false
             callRecord.phoneNumber = systemCallRecord.phoneNumber
         }

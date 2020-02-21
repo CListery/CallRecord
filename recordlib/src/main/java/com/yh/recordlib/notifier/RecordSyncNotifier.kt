@@ -53,7 +53,7 @@ class RecordSyncNotifier private constructor() {
                     if(record.synced) {
                         event.onSyncSuccess(record.recordId)
                     } else {
-                        event.onSuncFail(record.recordId)
+                        event.onSyncFail(record.recordId)
                     }
                 }
             }
