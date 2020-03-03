@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.CallLog
-import android.support.v4.app.JobIntentService
 import android.text.TextUtils
+import androidx.core.app.JobIntentService
 import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.save
 import com.yh.recordlib.BuildConfig
@@ -35,6 +35,7 @@ class SyncCallService : JobIntentService() {
 
         @JvmStatic
         fun enqueueWork(context: Context, recordId: String?) {
+            Timber.w("enqueueWork1: $context - $recordId")
             if(null != recordId) {
                 enqueueWork(context, Intent().putExtra(Constants.EXTRA_LAST_RECORD_ID, recordId))
             } else {
@@ -44,7 +45,7 @@ class SyncCallService : JobIntentService() {
 
         @JvmStatic
         fun enqueueWork(context: Context, work: Intent = Intent()) {
-            Timber.w("enqueueWork: $context - $work")
+            Timber.w("enqueueWork2: $context - $work")
             enqueueWork(context, SyncCallService::class.java, JOB_ID, work)
         }
     }
@@ -210,7 +211,7 @@ class SyncCallService : JobIntentService() {
     private fun precisionFilter(
         sr: SystemCallRecord, cr: CallRecord, precisionCount: Int
     ): Boolean {
-        //重新精算时间偏移量
+        //重新计算时间偏移量
         val timeOffset = BuildConfig.MAX_CALL_TIME_OFFSET - (BuildConfig.MIN_CALL_TIME_OFFSET * precisionCount)
         val endTimeFilter = if(sr.duration > 0) {
             //系统库中有接通时长时,系统开始时间+接通时长=数据库中结束时间

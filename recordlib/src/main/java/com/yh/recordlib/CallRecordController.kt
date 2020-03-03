@@ -1,11 +1,14 @@
 package com.yh.recordlib
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.entity.LibraryRealmModule
+import com.yh.recordlib.media.MediaRecordHelper
 import com.yh.recordlib.notifier.RecordSyncNotifier
 import com.yh.recordlib.service.SyncCallService
 import io.realm.Realm
@@ -25,7 +28,7 @@ class CallRecordController private constructor(
     private val mSyncRetryTime: Long,
     private val mMaxRetryCount: Int
 ) {
-    
+
     companion object {
         @JvmStatic
         private var mInstances: CallRecordController? = null
@@ -39,6 +42,11 @@ class CallRecordController private constructor(
             return mInstances!!
         }
 
+        /**
+         * @param needInitSync Whether to perform full synchronization during initialization. Default: false
+         * @param syncRetryTime Retry interval when the synchronous system's CallRecord data fails. Default: com.yh.recordlib.BuildConfig#CALL_RECORD_RETRY_TIME
+         * @param maxRetryCount Max retry count. Default: 2
+         */
         @Synchronized
         @JvmStatic
         fun initialization(
@@ -74,6 +82,7 @@ class CallRecordController private constructor(
     private val mRecordSyncNotifier: RecordSyncNotifier by lazy { RecordSyncNotifier.get() }
 
     init {
+        Timber.w("init")
         mHandlerThread.start()
         mHandler = Handler(mHandlerThread.looper)
 
@@ -97,8 +106,10 @@ class CallRecordController private constructor(
         if(mNeedInitSync) {
             SyncCallService.enqueueWork(application)
         }
+        MediaRecordHelper.get(application).setEnable(true)
+        Timber.w("init done!")
     }
-    
+
     fun retry(work: Intent) {
         val retryCount = work.getIntExtra(Constants.EXTRA_RETRY, 0)
         Timber.e("retry ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)} -> $retryCount")
@@ -109,11 +120,11 @@ class CallRecordController private constructor(
         work.putExtra(Constants.EXTRA_RETRY, retryCount.inc())
         mHandler.postDelayed({ SyncCallService.enqueueWork(application, work) }, mSyncRetryTime)
     }
-    
+
     fun registerRecordSyncListener(iSyncCallback: ISyncCallback) {
         mRecordSyncNotifier.register(iSyncCallback)
     }
-    
+
     fun unRegisterRecordSyncListener(iSyncCallback: ISyncCallback) {
         mRecordSyncNotifier.unRegister(iSyncCallback)
     }

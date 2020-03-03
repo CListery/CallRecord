@@ -13,14 +13,13 @@
     <!--<uses-permission android:name="android.permission.READ_PHONE_NUMBERS"/>-->
     
     <application>
-
         <service
-                android:name="com.yh.recordlib.service.RecordCallService"
-                android:exported="false"/>
+            android:name="com.yh.recordlib.service.RecordCallService"
+            android:exported="false" />
         <service
-                android:name="com.yh.recordlib.service.SyncCallService"
-                android:exported="false"
-                android:permission="android.permission.BIND_JOB_SERVICE"/>
+            android:name="com.yh.recordlib.service.SyncCallService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 
 </manifest>

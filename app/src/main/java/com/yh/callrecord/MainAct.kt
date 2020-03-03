@@ -81,6 +81,8 @@ class MainAct : Activity(),
             Timber.w("-> ${TelephonyCenter.get().getSimOperator(2).operatorName}")
             Timber.w("-> ${TelephonyCenter.get().getAllSimOperator()}")
             Timber.w("-> ${TelephonyCenter.get().getPhoneNumber()}")
+            Timber.w("-> ${TelephonyCenter.get().getPhoneNumber(1)}")
+            Timber.w("-> ${TelephonyCenter.get().getPhoneNumber(2)}")
             Timber.w("-> ${TelephonyCenter.get().getIccSerialNumber()}")
             Timber.w("-> ${TelephonyCenter.get().getIccSerialNumber(1)}")
             Timber.w("-> ${TelephonyCenter.get().getIccSerialNumber(2)}")

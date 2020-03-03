@@ -6,7 +6,6 @@ import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.provider.CallLog
-import android.support.multidex.MultiDex
 import com.yh.callrecord.db.CallRecordDBMigration
 import com.yh.recordlib.CallRecordController
 import timber.log.Timber
@@ -30,7 +29,6 @@ class App : Application() {
     }
     
     override fun attachBaseContext(base: Context?) {
-        MultiDex.install(base)
         super.attachBaseContext(base)
         
         if(!isInAppProcess(base)) {
