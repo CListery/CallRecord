@@ -129,8 +129,14 @@ open class CallRecord : RealmObject() {
         if(duration > 0) {
             val tmpDuration = min(getEndSecond() - getOffHookSecond(), getEndSecond() - getStartSecond())
             Timber.w("recalculateDuration: $duration -> $tmpDuration")
-            if(duration * 2 > tmpDuration) {
+            if (duration == tmpDuration) {
+                //未接通
                 duration = 0
+            } else if (duration < tmpDuration) {
+                if (tmpDuration - duration <= 2) {
+                    //未接通
+                    duration = 0
+                }
             }
         }
         save()
