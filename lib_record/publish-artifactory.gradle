@@ -1,0 +1,29 @@
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
+
+publishing {
+    publications {
+        mavenArr(MavenPublication) {
+            groupId 'com.clistery.app'
+            version = VERSION_NAME
+            artifactId 'callrecord'
+            artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
+        }
+    }
+}
+
+artifactory {
+    contextUrl = artifactory_url
+    publish {
+        repository {
+            // The Artifactory repository key to publish to
+            repoKey = artifactory_maven_name
+            username = artifactory_maven_user
+            password = artifactory_maven_publish_key
+            maven = true
+        }
+        defaults {
+            publications('mavenArr')
+        }
+    }
+}

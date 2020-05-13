@@ -9,7 +9,6 @@ import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.ISyncCallback
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
-import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.ext.queryLastRecord
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService

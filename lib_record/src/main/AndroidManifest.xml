@@ -1,0 +1,30 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.yh.recordlib">
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!--<uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS"/>-->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <!--<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>-->
+    <uses-permission android:name="android.permission.READ_CALL_LOG"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <!--<uses-permission android:name="android.permission.READ_SMS"/>-->
+    <!--<uses-permission android:name="android.permission.READ_PHONE_NUMBERS"/>-->
+    
+    <application>
+        <service
+            android:name="com.yh.recordlib.service.RecordCallService"
+            android:exported="false" />
+        <service
+            android:name="com.yh.recordlib.service.JobRecordCallService"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+            android:name="com.yh.recordlib.service.SyncCallService"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+    </application>
+
+</manifest>

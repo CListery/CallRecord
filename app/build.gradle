@@ -5,7 +5,7 @@ apply plugin: 'kotlin-kapt'
 apply plugin: 'realm-android'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion buildVersionInt
     defaultConfig {
         applicationId "com.yh.callrecord"
         minSdkVersion 19
@@ -45,12 +45,12 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
-    implementation project(path: ':recordlib')
-
     //Timber
     implementation 'com.jakewharton.timber:timber:4.7.1'
     //Kotlin-Realm-Extensions
     implementation 'com.github.vicpinm:krealmextensions:2.5.0'
     //AndLinker
     implementation 'com.codezjx.library:andlinker:0.7.1'
+    implementation 'com.clistery.app:appinject:1.2.0'
+    implementation 'com.clistery.app:callrecord:1.3.3'
 }

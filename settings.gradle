@@ -1,1 +1,1 @@
-include ':app', ':recordlib'
+include ':app', ':lib_record'
