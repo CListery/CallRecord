@@ -31,5 +31,4 @@
 - [Realm](httpshttps://github.com/realm)
 - [RxAndroid](https://github.com/ReactiveX/RxAndroid)
 - [Kotlin-Realm-Extensions](https://github.com/vicpinm/Kotlin-Realm-Extensions)
-- [Timber](https://github.com/JakeWharton/timber)
 - [AndLinker](https://github.com/codezjx/AndLinker)

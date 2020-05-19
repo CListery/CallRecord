@@ -7,13 +7,14 @@ import android.net.Uri
 import android.os.Handler
 import android.provider.CallLog
 import android.text.TextUtils
+import com.yh.appinject.logger.logD
+import com.yh.appinject.logger.logW
 import com.yh.callrecord.db.CallRecordDBMigration
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.CallRecordController.Companion.initialization
 import com.yh.recordlib.RecordConfigure
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.inject.IRecordAppInject
-import timber.log.Timber
 import java.io.File
 
 /**
@@ -41,18 +42,14 @@ class App : Application(), IRecordAppInject {
             return
         }
 
-        if (BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree())
-        }
-
-        Timber.w("attachBaseContext: $base")
+        logW("attachBaseContext: $base")
 
         mApplicationCtx = this
     }
 
     override fun onCreate() {
         super.onCreate()
-        Timber.w("onCreate: $mApplicationCtx")
+        logW("onCreate: $mApplicationCtx")
 
         if (null == mApplicationCtx) {
             return
@@ -75,19 +72,19 @@ class App : Application(), IRecordAppInject {
             CallLog.Calls.CONTENT_URI,
             true,
             object : ContentObserver(Handler(Handler.Callback { msg ->
-                Timber.d("handleMessage: $msg")
+                logD("handleMessage: $msg")
                 true
             })) {
                 override fun onChange(selfChange: Boolean) {
-                    Timber.d("onChange: $selfChange")
+                    logD("onChange: $selfChange")
                 }
 
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
-                    Timber.d("onChange: $selfChange -> $uri")
+                    logD("onChange: $selfChange -> $uri")
                 }
 
                 override fun deliverSelfNotifications(): Boolean {
-                    Timber.d("deliverSelfNotifications")
+                    logD("deliverSelfNotifications")
                     return super.deliverSelfNotifications()
                 }
             })
@@ -110,7 +107,7 @@ class App : Application(), IRecordAppInject {
     }
 
     override fun onTerminate() {
-        Timber.w("onTerminate")
+        logW("onTerminate")
         super.onTerminate()
     }
 

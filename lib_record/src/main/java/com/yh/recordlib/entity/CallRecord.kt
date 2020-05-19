@@ -2,12 +2,12 @@ package com.yh.recordlib.entity
 
 import android.os.Build
 import com.vicpin.krealmextensions.save
+import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import io.realm.RealmObject
 import io.realm.annotations.PrimaryKey
 import io.realm.annotations.RealmClass
 import io.realm.annotations.Required
-import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.min
@@ -115,7 +115,7 @@ open class CallRecord : RealmObject() {
     var isDeleted: Boolean = false
 
     fun recalculateDuration() {
-        Timber.w("$synced - $recalculated - $phoneAccountId")
+        TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")
         if(!synced) {
             return
         }
@@ -139,7 +139,7 @@ open class CallRecord : RealmObject() {
      * 大于 1 分钟则认定为接通就不需要再计算
      */
     private fun internalRecalculateDuration() {
-        Timber.w("d:$duration - e:$callEndTime")
+        TelephonyCenter.get().libW("d:$duration - e:$callEndTime")
         if(duration in 1..61) {
             needRecalculated = true
             if(callEndTime <= 0) {
@@ -155,7 +155,7 @@ open class CallRecord : RealmObject() {
             val tmpDuration = min(
                 callEndTime - callOffHookTime, callEndTime - callStartTime
             ).div(1000)
-            Timber.w("t:$tmpDuration")
+            TelephonyCenter.get().libW("t:$tmpDuration")
             if(duration == tmpDuration) {
                 if(Build.VERSION.SDK_INT < 27){
                     //某些高版本机型已经修复了电信卡一开始拨打就记时的问题
@@ -182,7 +182,7 @@ open class CallRecord : RealmObject() {
 
     private fun checkNeedRecalculate(): Boolean {
         val subscriptionId = phoneAccountId ?: -1
-        Timber.w("checkNeedRecalculate subId: $subscriptionId")
+        TelephonyCenter.get().libW("checkNeedRecalculate subId: $subscriptionId")
         var targetSimOperator = TelephonyCenter.get().getSimOperator(subscriptionId)
 
         if(TelephonyCenter.SimOperator.Unknown == targetSimOperator) {

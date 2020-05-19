@@ -5,6 +5,8 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import com.codezjx.andlinker.AndLinker
+import com.yh.appinject.logger.ext.libD
+import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.ISyncCallback
 import com.yh.recordlib.TelephonyCenter
@@ -15,7 +17,6 @@ import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.service.RecordCallService
 import com.yh.recordlib.service.SyncCallService
 import kotlinx.android.synthetic.main.act_main.*
-import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -57,11 +58,11 @@ class MainAct : Activity(),
         CallRecordController.get()
             .registerRecordSyncListener(object : ISyncCallback {
                 override fun onSyncFail(recordId: String) {
-                    Timber.d("onSyncFail: $recordId")
+                    TelephonyCenter.get().libD("onSyncFail: $recordId")
                 }
                 
                 override fun onSyncSuccess(recordId: String) {
-                    Timber.d("onSyncSuccess: $recordId")
+                    TelephonyCenter.get().libD("onSyncSuccess: $recordId")
                 }
             })
         
@@ -75,16 +76,16 @@ class MainAct : Activity(),
                 .call(this, "10010", mRecordService)
         }
         mGetMCCMNC?.setOnClickListener {
-            Timber.w("-> ${TelephonyCenter.get().getSimOperator().operatorName}")
-            Timber.w("-> ${TelephonyCenter.get().getSimOperator(1).operatorName}")
-            Timber.w("-> ${TelephonyCenter.get().getSimOperator(2).operatorName}")
-            Timber.w("-> ${TelephonyCenter.get().getAllSimOperator()}")
-            Timber.w("-> ${TelephonyCenter.get().getPhoneNumber()}")
-            Timber.w("-> ${TelephonyCenter.get().getPhoneNumber(1)}")
-            Timber.w("-> ${TelephonyCenter.get().getPhoneNumber(2)}")
-            Timber.w("-> ${TelephonyCenter.get().getIccSerialNumber()}")
-            Timber.w("-> ${TelephonyCenter.get().getIccSerialNumber(1)}")
-            Timber.w("-> ${TelephonyCenter.get().getIccSerialNumber(2)}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator().operatorName}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator(1).operatorName}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator(2).operatorName}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getAllSimOperator()}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getPhoneNumber()}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getPhoneNumber(1)}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getPhoneNumber(2)}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber()}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(1)}")
+            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(2)}")
         }
         mGetLastRecord?.setOnClickListener {
             queryLastRecord()?.apply {
@@ -123,7 +124,7 @@ class MainAct : Activity(),
     }
     
     override fun onUnBind() {
-        Timber.d("onUnBind")
+        TelephonyCenter.get().libD("onUnBind")
         mBindSuccess.set(false)
     }
 }

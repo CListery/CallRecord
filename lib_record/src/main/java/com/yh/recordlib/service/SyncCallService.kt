@@ -9,8 +9,12 @@ import android.text.TextUtils
 import androidx.core.app.JobIntentService
 import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.save
+import com.yh.appinject.logger.ext.libD
+import com.yh.appinject.logger.ext.libE
+import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.CallRecordController
+import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
@@ -20,7 +24,6 @@ import com.yh.recordlib.ext.findAllUnSyncRecords
 import com.yh.recordlib.ext.findRecordById
 import com.yh.recordlib.ext.parseSystemCallRecords
 import com.yh.recordlib.notifier.RecordSyncNotifier
-import timber.log.Timber
 import kotlin.math.max
 
 /**
@@ -36,7 +39,7 @@ class SyncCallService : JobIntentService() {
 
         @JvmStatic
         fun enqueueWork(context: Context, recordId: String?) {
-            Timber.w("enqueueWork1: $context - $recordId")
+            TelephonyCenter.get().libW("enqueueWork1: $context - $recordId")
             if(null != recordId) {
                 enqueueWork(context, Intent().putExtra(Constants.EXTRA_LAST_RECORD_ID, recordId))
             } else {
@@ -46,18 +49,18 @@ class SyncCallService : JobIntentService() {
 
         @JvmStatic
         fun enqueueWork(context: Context, work: Intent = Intent()) {
-            Timber.w("enqueueWork2: $context - $work")
+            TelephonyCenter.get().libW("enqueueWork2: $context - $work")
             enqueueWork(context, SyncCallService::class.java, JOB_ID, work)
         }
     }
     
     override fun onHandleWork(work: Intent) {
         if(work.hasExtra(Constants.EXTRA_RETRY)) {
-            Timber.w("onHandleWork >>RETRY<< : $work")
+            TelephonyCenter.get().libW("onHandleWork >>RETRY<< : $work")
         }
-        Timber.w("onHandleWork 1: $work")
+        TelephonyCenter.get().libW("onHandleWork 1: $work")
         val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
-        Timber.d("onHandleWork 2: $recordId")
+        TelephonyCenter.get().libD("onHandleWork 2: $recordId")
         
         if(null == recordId || TextUtils.isEmpty(recordId)) {
             syncAllRecord()
@@ -69,11 +72,11 @@ class SyncCallService : JobIntentService() {
     private fun syncAllRecord() {
         val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
         if(null == callLogClient) {
-            Timber.e("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
+            TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
             return
         }
         val tmpUnSyncRecords = findAllUnSyncRecords()
-        Timber.d("syncAllRecord: tmpUnSyncRecords -> ${tmpUnSyncRecords?.toString()}")
+        TelephonyCenter.get().libD("syncAllRecord: tmpUnSyncRecords -> ${tmpUnSyncRecords?.toString()}")
         if(null == tmpUnSyncRecords || tmpUnSyncRecords.isEmpty()) {
             return
         }
@@ -117,7 +120,7 @@ class SyncCallService : JobIntentService() {
             )
             val sort = CallLog.Calls.DEFAULT_SORT_ORDER
             
-            Timber.d("syncAllRecord: selection -> $selection ; args -> $args")
+            TelephonyCenter.get().libD("syncAllRecord: selection -> $selection ; args -> $args")
     
             @SuppressLint("Recycle")
             // close by #parseSystemCallRecords
@@ -128,7 +131,7 @@ class SyncCallService : JobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            Timber.d("syncAllRecord: callLogResult -> ${callLogResult?.count}")
+            TelephonyCenter.get().libD("syncAllRecord: callLogResult -> ${callLogResult?.count}")
             
             callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
                 if(systemRecords.isNotEmpty()) {
@@ -145,42 +148,42 @@ class SyncCallService : JobIntentService() {
                                 targetRecords.size == 1 -> {
                                     val target = targetRecords[0]
                                     syncRecordBySys(target, sr)
-                                    Timber.d("syncAllRecord: recordCall -> $target")
+                                    TelephonyCenter.get().libD("syncAllRecord: recordCall -> $target")
                                     allUnSyncRecords.remove(target)
                                     syncedCount++
                                 }
                                 
                                 targetRecords.isEmpty() -> {
                                     //该条系统记录不能找到匹配的为同步记录,正常情况,因为没有一直监听
-                                    Timber.w("syncAllRecord: Ignored Sys record: $sr")
+                                    TelephonyCenter.get().libW("syncAllRecord: Ignored Sys record: $sr")
                                     return@sys
                                 }
                                 
                                 else -> {
                                     //找到太多相似的记录
-                                    Timber.e("syncAllRecord: Find too many similar records: $sr")
+                                    TelephonyCenter.get().libE("syncAllRecord: Find too many similar records: $sr")
                                     return@sys
                                 }
                             }
                         } else {
-                            Timber.e("syncAllRecord: Not found target record: $sr")
+                            TelephonyCenter.get().libE("syncAllRecord: Not found target record: $sr")
                         }
                     }
                     if(allUnSyncRecords.isNotEmpty()) {
-                        Timber.e("syncAllRecord: Failed to sync successfully: $allUnSyncRecords")
+                        TelephonyCenter.get().libE("syncAllRecord: Failed to sync successfully: $allUnSyncRecords")
                         markNoMappingRecord(allUnSyncRecords)
                     }
-                    Timber.w("syncAllRecord: $syncedCount records have been synchronized done!!")
+                    TelephonyCenter.get().libW("syncAllRecord: $syncedCount records have been synchronized done!!")
                 } else {
-                    Timber.e("syncAllRecord: Not found sys mapping record!!")
+                    TelephonyCenter.get().libE("syncAllRecord: Not found sys mapping record!!")
                     markNoMappingRecord(allUnSyncRecords)
                 }
             }, failAction = {
-                Timber.e("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!")
+                TelephonyCenter.get().libE("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!")
                 markNoMappingRecord(allUnSyncRecords)
             })
         } catch(e: Exception) {
-            Timber.e(e)
+            TelephonyCenter.get().libE("syncAllRecord", throwable = e)
             markNoMappingRecord(allUnSyncRecords)
         } finally {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -289,11 +292,11 @@ class SyncCallService : JobIntentService() {
      */
     private fun syncTargetRecord(work: Intent, recordId: String) {
         val recordCall = findRecordById(recordId) ?: return
-        Timber.d("syncTargetRecord: $recordCall")
+        TelephonyCenter.get().libD("syncTargetRecord: $recordCall")
         
         val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
         if(null == callLogClient) {
-            Timber.e("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
+            TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
             return
         }
         
@@ -335,26 +338,26 @@ class SyncCallService : JobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            Timber.d("syncTargetRecord: callLogResult -> $callLogResult")
+            TelephonyCenter.get().libD("syncTargetRecord: callLogResult -> $callLogResult")
             
             callLogResult.parseSystemCallRecords(successAction = { records ->
                 if(records.isNotEmpty()) {
-                    Timber.d("syncTargetRecord: recordCall -> $recordCall")
+                    TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $recordCall")
                     syncRecordBySys(recordCall, records[0])
                 } else {
-                    Timber.w("syncTargetRecord: Not found sys mapping record!! -> $recordCall")
+                    TelephonyCenter.get().libW("syncTargetRecord: Not found sys mapping record!! -> $recordCall")
                     markNoMappingRecord(arrayListOf(recordCall))
                     CallRecordController.get()
                         .retry(work)
                 }
             }, failAction = {
-                Timber.w("syncTargetRecord: Not found any record with $selection from system db! -> $recordCall")
+                TelephonyCenter.get().libW("syncTargetRecord: Not found any record with $selection from system db! -> $recordCall")
                 markNoMappingRecord(arrayListOf(recordCall))
                 CallRecordController.get()
                     .retry(work)
             })
         } catch(e: Exception) {
-            Timber.e(e)
+            TelephonyCenter.get().libE("syncTargetRecord", throwable = e)
             markNoMappingRecord(arrayListOf(recordCall))
         } finally {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -366,7 +369,7 @@ class SyncCallService : JobIntentService() {
     }
     
     private fun syncRecordBySys(callRecord: CallRecord, systemCallRecord: SystemCallRecord) {
-        Timber.d("syncRecordBySys: ${callRecord.isFake} -> $systemCallRecord")
+        TelephonyCenter.get().libD("syncRecordBySys: ${callRecord.isFake} -> $systemCallRecord")
         callRecord.callLogId = systemCallRecord.callId
         callRecord.callStartTime = systemCallRecord.date
         callRecord.duration = systemCallRecord.duration
@@ -397,6 +400,6 @@ class SyncCallService : JobIntentService() {
     
     override fun onDestroy() {
         super.onDestroy()
-        Timber.w("All sync job is complete!")
+        TelephonyCenter.get().libW("All sync job is complete!")
     }
 }

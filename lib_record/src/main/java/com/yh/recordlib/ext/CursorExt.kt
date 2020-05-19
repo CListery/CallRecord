@@ -3,9 +3,9 @@ package com.yh.recordlib.ext
 import android.database.Cursor
 import android.os.Build
 import android.provider.CallLog
+import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.SystemCallRecord
-import timber.log.Timber
 
 /**
  * Created by CYH on 2019-06-17 11:17
@@ -52,14 +52,14 @@ fun Cursor?.parseSystemCallRecords(
     successAction: ((ArrayList<SystemCallRecord>) -> Unit)? = null, failAction: (() -> Unit)? = null
 ) {
     if(null == this) {
-        Timber.w("parseSystemCallRecords: cursor -> NULL!")
+        TelephonyCenter.get().libW("parseSystemCallRecords: cursor -> NULL!")
         failAction?.invoke()
         return
     }
     val records = arrayListOf<SystemCallRecord>()
     this.use callLogResult@{ result ->
         if(result.count <= 0 || !result.moveToFirst()) {
-            Timber.w("parseSystemCallRecords: count -> ${result.count}")
+            TelephonyCenter.get().libW("parseSystemCallRecords: count -> ${result.count}")
             failAction?.invoke()
             return
         }

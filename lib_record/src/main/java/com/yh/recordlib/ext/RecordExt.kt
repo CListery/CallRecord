@@ -2,9 +2,10 @@ package com.yh.recordlib.ext
 
 import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.querySorted
+import com.yh.appinject.logger.ext.libD
+import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
 import io.realm.Sort
-import timber.log.Timber
 
 /**
  * Created by CYH on 2019-05-30 14:20
@@ -27,7 +28,7 @@ fun findAllUnSyncRecords(): List<CallRecord>? {
 
 fun queryLastRecord(): CallRecord? {
     val recordList = querySorted<CallRecord>("callStartTime", Sort.DESCENDING)
-    Timber.d("queryLastRecord: $recordList")
+    TelephonyCenter.get().libD("queryLastRecord: $recordList")
     if(recordList.isNotEmpty()) {
         return recordList.first()
     }

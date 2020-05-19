@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
+import com.yh.appinject.logger.ext.libE
+import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.entity.RecordRealmModule
 import com.yh.recordlib.notifier.RecordSyncNotifier
@@ -11,7 +13,6 @@ import com.yh.recordlib.service.SyncCallService
 import io.realm.Realm
 import io.realm.RealmConfiguration
 import io.realm.RealmMigration
-import timber.log.Timber
 import java.io.File
 
 /**
@@ -62,7 +63,7 @@ class CallRecordController private constructor(
                 )
                 mInstances = instances
             } else {
-                Timber.w("reInitialization")
+                TelephonyCenter.get().libW("reInitialization")
                 instances.needInitSync = configure.needInitSync
                 instances.dbFileDirName = configure.dbFileDirName.invoke()
                 instances.dbVersion = configure.dbVersion
@@ -81,20 +82,16 @@ class CallRecordController private constructor(
     private val mRecordSyncNotifier: RecordSyncNotifier by lazy { RecordSyncNotifier.get() }
     
     init {
-        Timber.w("init")
+        TelephonyCenter.get().libW("init")
         mHandlerThread.start()
         mHandler = Handler(mHandlerThread.looper)
-        
-        if(BuildConfig.ENABLE_DEBUG && 0 == Timber.treeCount()) {
-            Timber.plant(Timber.DebugTree())
-        }
-        
+
         Realm.init(application)
-        Timber.w("init done!")
+        TelephonyCenter.get().libW("init done!")
     }
     
     private fun setupConfig() {
-        Timber.w("setupConfig")
+        TelephonyCenter.get().libW("setupConfig")
         val builder = RealmConfiguration.Builder()
         builder.directory(File(dbFileDirName))
         builder.name(BuildConfig.CALL_RECORD_DB)
@@ -118,14 +115,14 @@ class CallRecordController private constructor(
         if(needInitSync) {
             SyncCallService.enqueueWork(application)
         }
-        Timber.w("setupConfig done!")
+        TelephonyCenter.get().libW("setupConfig done!")
     }
     
     fun retry(work: Intent) {
         val retryCount = work.getIntExtra(Constants.EXTRA_RETRY, 0)
-        Timber.e("retry ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)} -> $retryCount")
+        TelephonyCenter.get().libE("retry ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)} -> $retryCount")
         if(retryCount >= maxRetryCount) {
-            Timber.e("Can not retry sync this record ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)}")
+            TelephonyCenter.get().libE("Can not retry sync this record ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)}")
             return
         }
         work.putExtra(Constants.EXTRA_RETRY, retryCount.inc())

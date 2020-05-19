@@ -9,8 +9,9 @@ import android.telephony.TelephonyManager
 import android.text.TextUtils
 import com.codezjx.andlinker.AndLinkerBinder
 import com.vicpin.krealmextensions.save
-import com.yh.appinject.ext.LogW
 import com.yh.appinject.lifecycle.IAppForegroundEvent
+import com.yh.appinject.logger.ext.libD
+import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
@@ -22,7 +23,6 @@ import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.media.MediaRecordHelper
 import com.yh.recordlib.utils.makeMD5UUID
 import com.yh.recordlib.utils.makeRandomUUID
-import timber.log.Timber
 
 /**
  * Created by CYH on 2019-05-30 11:05
@@ -30,7 +30,6 @@ import timber.log.Timber
 class RecordCallService : Service() {
     
     companion object {
-        private const val TAG = "RecordCallService"
         @JvmStatic
         private var mCurrentState = TelephonyManager.CALL_STATE_IDLE
         @JvmStatic
@@ -47,7 +46,7 @@ class RecordCallService : Service() {
         }
         
         override fun startListen(callNumber: String?) {
-            LogW(TAG, "startListen")
+            TelephonyCenter.get().libW("startListen")
             if(TelephonyManager.CALL_STATE_IDLE == mCurrentState) {
                 if(null == mLastRecordId && !TextUtils.isEmpty(callNumber)) {
                     makeRecord(callNumber, CallType.CallOut)
@@ -57,7 +56,7 @@ class RecordCallService : Service() {
         }
         
         override fun stopListen() {
-            LogW(TAG, "stopListen: $mCurrentState")
+            TelephonyCenter.get().libW("stopListen: $mCurrentState")
             if(TelephonyManager.CALL_STATE_IDLE == mCurrentState) {
                 internalStopListen()
             }
@@ -70,14 +69,14 @@ class RecordCallService : Service() {
     
     private val mStateListener = object : PhoneStateListener() {
         override fun onCallStateChanged(state: Int, phoneNumber: String?) {
-            Timber.d("onCallStateChanged: $state - $phoneNumber")
+            TelephonyCenter.get().libD("onCallStateChanged: $state - $phoneNumber")
             internalCallStateChanged(state, TelephonyCenter.get().filterGarbageInPhoneNumber(phoneNumber))
         }
     }
     
     private val mForegroundEvent = object : IAppForegroundEvent {
         override fun onForegroundStateChange(isForeground: Boolean) {
-            LogW(TAG, "onForegroundStateChange: $isForeground")
+            TelephonyCenter.get().libW("onForegroundStateChange: $isForeground")
             if(isForeground) {
                 unKeepAlive()
             } else {
@@ -88,13 +87,13 @@ class RecordCallService : Service() {
 
 //    private val mCallStateReceiver = object : BroadcastReceiver() {
 //        override fun onReceive(context: Context?, intent: Intent?) {
-//            Timber.d("onReceive: ${intent?.action} -> ${System.currentTimeMillis()}")
-//            Timber.d(
+//            TelephonyCenter.get().libD("onReceive: ${intent?.action} -> ${System.currentTimeMillis()}")
+//            TelephonyCenter.get().libD(
 //                "onReceive: TelephonyManager.EXTRA_STATE -> ${intent?.getStringExtra(
 //                    TelephonyManager.EXTRA_STATE
 //                )}"
 //            )
-//            Timber.d(
+//            TelephonyCenter.get().libD(
 //                "onReceive: TelephonyManager.EXTRA_INCOMING_NUMBER -> ${intent?.getStringExtra(
 //                    TelephonyManager.EXTRA_INCOMING_NUMBER
 //                )}"
@@ -113,10 +112,10 @@ class RecordCallService : Service() {
                 if(TelephonyManager.CALL_STATE_IDLE != mCurrentState) {
                     //挂断
                     mCurrentState = state
-                    Timber.d("IDLE 1: $mLastRecordId")
+                    TelephonyCenter.get().libD("IDLE 1: $mLastRecordId")
                     if(null != mLastRecordId) {
                         val lastRecord = findRecordById(mLastRecordId!!)
-                        Timber.d("IDLE 2: $lastRecord")
+                        TelephonyCenter.get().libD("IDLE 2: $lastRecord")
                         if(null != lastRecord) {
                             lastRecord.callEndTime = System.currentTimeMillis()
                             lastRecord.save()
@@ -188,7 +187,7 @@ class RecordCallService : Service() {
         if(null == recordPhoneNumber || TextUtils.isEmpty(recordPhoneNumber)) {
             fake = true
             recordPhoneNumber = createFakePhoneNumber()
-            Timber.w("Fake phone number: $recordPhoneNumber")
+            TelephonyCenter.get().libW("Fake phone number: $recordPhoneNumber")
             val fakeRecord = FakeCallRecord()
             fakeRecord.recordId = recordId
             fakeRecord.fakeNumber = recordPhoneNumber
@@ -213,14 +212,14 @@ class RecordCallService : Service() {
     private fun createFakePhoneNumber() = makeMD5UUID()
     
     private fun internalStartListen() {
-        LogW(TAG, "internalStartListen")
+        TelephonyCenter.get().libW("internalStartListen")
         TelephonyCenter.get().registerActivityLifecycleCallbacks(mForegroundEvent)
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_CALL_STATE)
     }
     
     private fun internalStopListen() {
-        LogW(TAG, "internalStopListen")
+        TelephonyCenter.get().libW("internalStopListen")
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_NONE)
         TelephonyCenter.get().unRegisterActivityLifecycleCallbacks(mForegroundEvent)

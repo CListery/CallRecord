@@ -15,6 +15,5 @@ class RecordConfigure(
     val migration: (() -> RealmMigration)? = null,
     val syncRetryTime: Long = BuildConfig.CALL_RECORD_RETRY_TIME,
     val maxRetryCount: Int = 2,
-    val modules: (() -> Array<*>)? = { arrayOf(RecordRealmModule()) },
-    val enableDebug: Boolean = false
+    val modules: (() -> Array<*>)? = { arrayOf(RecordRealmModule()) }
 )

@@ -23,11 +23,12 @@ import com.android.internal.telephony.IPhoneSubInfo
 import com.android.internal.telephony.ITelephony
 import com.android.internal.telephony.ITelephonyRegistry
 import com.yh.appinject.InjectHelper
+import com.yh.appinject.logger.ext.libE
+import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.cons.TelephonyProperties
 import com.yh.recordlib.inject.IRecordAppInject
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.lang.InvalidSubscriberIdException
-import timber.log.Timber
 
 /**
  * Created by CYH on 2019-06-03 10:09
@@ -69,7 +70,6 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             if (Build.VERSION.SDK_INT < 28) {
                 return
             }
-            Timber.w("try disableAndroidPWarning!")
             try {
                 val aClass = Class.forName("android.content.pm.PackageParser\$Package")
                 val declaredConstructor = aClass.getDeclaredConstructor(String::class.java)
@@ -186,16 +186,16 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
         var iTelephony: ITelephony? =
             ITelephony.Stub.asInterface(ServiceManager.getService(Context.TELEPHONY_SERVICE))
         if (null != iTelephony) {
-            Timber.w("initITelephony DONE! -> $iTelephony")
+            libW("initITelephony DONE! -> $iTelephony")
             return iTelephony
         }
         try {
             val getITelephony = TelephonyManager::class.java.getDeclaredMethod("getITelephony")
             getITelephony.isAccessible = true
             iTelephony = getITelephony.invoke(mTM) as? ITelephony
-            Timber.w("initITelephony DONE! -> $iTelephony")
+            libW("initITelephony DONE! -> $iTelephony")
         } catch (e: Exception) {
-            Timber.e(e)
+            libE("initITelephony", throwable = e)
         }
         return iTelephony
     }
@@ -206,7 +206,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             ServiceManager.getService("iphonesubinfo")
         )
         if (null != iPhoneSubInfo) {
-            Timber.w("initIPhoneSubInfo DONE! -> $iPhoneSubInfo")
+            libW("initIPhoneSubInfo DONE! -> $iPhoneSubInfo")
             return iPhoneSubInfo
         }
         try {
@@ -214,9 +214,9 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
                 TelephonyManager::class.java.getDeclaredMethod("getSubscriberInfo")
             getSubscriberInfo.isAccessible = true
             iPhoneSubInfo = getSubscriberInfo.invoke(mTM) as? IPhoneSubInfo
-            Timber.w("initIPhoneSubInfo DONE! -> $iPhoneSubInfo")
+            libW("initIPhoneSubInfo DONE! -> $iPhoneSubInfo")
         } catch (e: Exception) {
-            Timber.e(e)
+            libE("initIPhoneSubInfo", throwable = e)
         }
         return iPhoneSubInfo
     }
@@ -227,7 +227,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             ServiceManager.getService("telephony.registry")
         )
         if (null != iTelephonyRegistry) {
-            Timber.w("initITelephonyRegister DONE! -> $iTelephonyRegistry")
+            libW("initITelephonyRegister DONE! -> $iTelephonyRegistry")
             return iTelephonyRegistry
         }
         try {
@@ -235,9 +235,9 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
                 TelephonyManager::class.java.getDeclaredMethod("getTelephonyRegistry")
             getTelephonyRegistry.isAccessible = true
             iTelephonyRegistry = getTelephonyRegistry.invoke(mTM) as? ITelephonyRegistry
-            Timber.w("initITelephonyRegister DONE! -> $iTelephonyRegistry")
+            libW("initITelephonyRegister DONE! -> $iTelephonyRegistry")
         } catch (e: Exception) {
-            Timber.e(e)
+            libE("initITelephonyRegister", throwable = e)
         }
         return iTelephonyRegistry
     }
@@ -527,7 +527,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             try {
                 throw InvalidSubscriberIdException(phoneId, max)
             } catch (e: Exception) {
-                Timber.e(e)
+                libE("isValidPhoneId", throwable = e)
                 return false
             }
         }
@@ -551,7 +551,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
 
     fun call(context: Context, callNumber: String?, iRecordService: IRecordService?) {
         if (null == callNumber || null == iRecordService) {
-            Timber.w("call fail!")
+            libW("call fail!")
             return
         }
         if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(
