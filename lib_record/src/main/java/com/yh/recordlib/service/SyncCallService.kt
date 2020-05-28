@@ -9,10 +9,10 @@ import android.text.TextUtils
 import androidx.core.app.JobIntentService
 import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.save
+import com.yh.appinject.logger.ext.libCursor
 import com.yh.appinject.logger.ext.libD
 import com.yh.appinject.logger.ext.libE
 import com.yh.appinject.logger.ext.libW
-import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
@@ -115,8 +115,8 @@ class SyncCallService : JobIntentService() {
             selection.append("?")
             
             val args: ArrayList<String> = arrayListOf(
-                firstCallStartTime.minus(BuildConfig.MAX_CALL_TIME_OFFSET).toString(),
-                lastCallEndTime.plus(BuildConfig.MAX_CALL_TIME_OFFSET).toString()
+                firstCallStartTime.minus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset).toString(),
+                lastCallEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset).toString()
             )
             val sort = CallLog.Calls.DEFAULT_SORT_ORDER
             
@@ -141,9 +141,9 @@ class SyncCallService : JobIntentService() {
                             coarseFilter(sr, cr)
                         }
                         if(targetRecords.isNotEmpty()) {
-                            
+            
                             targetRecords = precisionFilter(sr, targetRecords)
-                            
+            
                             when {
                                 targetRecords.size == 1 -> {
                                     val target = targetRecords[0]
@@ -152,14 +152,14 @@ class SyncCallService : JobIntentService() {
                                     allUnSyncRecords.remove(target)
                                     syncedCount++
                                 }
-                                
+                
                                 targetRecords.isEmpty() -> {
                                     //该条系统记录不能找到匹配的为同步记录,正常情况,因为没有一直监听
                                     TelephonyCenter.get().libW("syncAllRecord: Ignored Sys record: $sr")
                                     return@sys
                                 }
-                                
-                                else -> {
+                
+                                else                    -> {
                                     //找到太多相似的记录
                                     TelephonyCenter.get().libE("syncAllRecord: Find too many similar records: $sr")
                                     return@sys
@@ -207,10 +207,8 @@ class SyncCallService : JobIntentService() {
         RecordSyncNotifier.get().notifyRecordSyncStatus(allUnSyncRecords)
     }
     
-    private fun precisionFilter(
-        sr: SystemCallRecord, crs: List<CallRecord>, precisionCount: Int = 0
-    ): List<CallRecord> {
-        if(precisionCount > BuildConfig.MAX_CALL_TIME_OFFSET / BuildConfig.MIN_CALL_TIME_OFFSET) {
+    private fun precisionFilter(sr: SystemCallRecord, crs: List<CallRecord>, precisionCount: Int = 0): List<CallRecord> {
+        if(precisionCount > TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset / TelephonyCenter.get().getRecordConfigure().minCallTimeOffset) {
             return crs
         }
         val tmp: List<CallRecord> = crs.filter { cr ->
@@ -225,11 +223,9 @@ class SyncCallService : JobIntentService() {
     /**
      * 精确过滤
      */
-    private fun precisionFilter(
-        sr: SystemCallRecord, cr: CallRecord, precisionCount: Int
-    ): Boolean {
+    private fun precisionFilter(sr: SystemCallRecord, cr: CallRecord, precisionCount: Int): Boolean {
         //重新计算时间偏移量
-        val timeOffset = BuildConfig.MAX_CALL_TIME_OFFSET - (BuildConfig.MIN_CALL_TIME_OFFSET * precisionCount)
+        val timeOffset = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset - (TelephonyCenter.get().getRecordConfigure().minCallTimeOffset * precisionCount)
         val crStartTime = max(cr.callStartTime, cr.callOffHookTime)
         if(crStartTime > 0 && cr.callEndTime <= 0) {
             //意外情况
@@ -265,7 +261,7 @@ class SyncCallService : JobIntentService() {
      * 2. 号码相同的情况直接过滤
      */
     private fun coarseFilter(
-        sr: SystemCallRecord, cr: CallRecord, timeOffset: Long = BuildConfig.MAX_CALL_TIME_OFFSET
+        sr: SystemCallRecord, cr: CallRecord, timeOffset: Long = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
     ): Boolean {
         return if(sr.phoneNumber.isEmpty() || cr.isFake) {
             //时间过滤
@@ -313,8 +309,8 @@ class SyncCallService : JobIntentService() {
             selection.append("?")
 
             val args: ArrayList<String> = arrayListOf(
-                recordCall.callStartTime.minus(BuildConfig.MAX_CALL_TIME_OFFSET).toString(),
-                recordCall.callEndTime.plus(BuildConfig.MAX_CALL_TIME_OFFSET).toString()
+                recordCall.callStartTime.minus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset).toString(),
+                recordCall.callEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset).toString()
             )
 
             if(!recordCall.isFake) {
@@ -327,7 +323,7 @@ class SyncCallService : JobIntentService() {
                 args.add(recordCall.phoneNumber)
             }
             
-            val sort = "${CallLog.Calls.DEFAULT_SORT_ORDER} LIMIT 1"
+            val sort = CallLog.Calls.DEFAULT_SORT_ORDER
     
             @SuppressLint("Recycle")
             // close by #parseSystemCallRecords
@@ -338,23 +334,45 @@ class SyncCallService : JobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            TelephonyCenter.get().libD("syncTargetRecord: callLogResult -> $callLogResult")
+            TelephonyCenter.get().libCursor(callLogResult)
             
-            callLogResult.parseSystemCallRecords(successAction = { records ->
-                if(records.isNotEmpty()) {
-                    TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $recordCall")
-                    syncRecordBySys(recordCall, records[0])
-                } else {
-                    TelephonyCenter.get().libW("syncTargetRecord: Not found sys mapping record!! -> $recordCall")
-                    markNoMappingRecord(arrayListOf(recordCall))
-                    CallRecordController.get()
-                        .retry(work)
+            callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
+                if(systemRecords.isNotEmpty()) {
+                    //                    TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $recordCall")
+                    //                    syncRecordBySys(recordCall, systemRecords[0])
+                    systemRecords.forEach sys@{ sr ->
+                        if(coarseFilter(sr, recordCall)) {
+                            val targetRecords = precisionFilter(sr, arrayListOf(recordCall))
+                            when {
+                                targetRecords.size == 1 -> {
+                                    val target = targetRecords[0]
+                                    syncRecordBySys(target, sr)
+                                    TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $target")
+                                    return@parseSystemCallRecords
+                                }
+                
+                                targetRecords.isEmpty() -> {
+                                    //该条系统记录不能找到匹配的为同步记录,正常情况,因为没有一直监听
+                                    TelephonyCenter.get().libW("syncTargetRecord: Ignored Sys record: $sr")
+                                }
+                
+                                else                    -> {
+                                    //找到太多相似的记录
+                                    TelephonyCenter.get().libE("syncTargetRecord: Find too many similar systemRecords: $sr")
+                                }
+                            }
+                        } else {
+                            TelephonyCenter.get().libE("syncTargetRecord: Not found target record: $sr")
+                        }
+                    }
                 }
+                TelephonyCenter.get().libW("syncTargetRecord: Not found sys mapping record!! -> $recordCall")
+                markNoMappingRecord(arrayListOf(recordCall))
+                CallRecordController.get().retry(work)
             }, failAction = {
                 TelephonyCenter.get().libW("syncTargetRecord: Not found any record with $selection from system db! -> $recordCall")
                 markNoMappingRecord(arrayListOf(recordCall))
-                CallRecordController.get()
-                    .retry(work)
+                CallRecordController.get().retry(work)
             })
         } catch(e: Exception) {
             TelephonyCenter.get().libE("syncTargetRecord", throwable = e)
