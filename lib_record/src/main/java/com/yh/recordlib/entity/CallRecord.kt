@@ -140,7 +140,7 @@ open class CallRecord : RealmObject() {
      */
     private fun internalRecalculateDuration() {
         TelephonyCenter.get().libW("d:$duration - e:$callEndTime")
-        if(duration in 1..61) {
+        if(duration in 1..60) {
             needRecalculated = true
             if(callEndTime <= 0) {
                 //App 被系统回收，没有获取到结束时间，并且没获取到有效的 lastModify

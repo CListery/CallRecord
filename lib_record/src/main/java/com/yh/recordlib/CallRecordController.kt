@@ -120,7 +120,11 @@ class CallRecordController private constructor(
     
     fun retry(work: Intent) {
         val retryCount = work.getIntExtra(Constants.EXTRA_RETRY, 0)
-        TelephonyCenter.get().libE("retry ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)} -> $retryCount")
+        if(work.hasExtra(Constants.EXTRA_LAST_RECORD_ID)) {
+            TelephonyCenter.get().libW("Retry TARGET:${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)} -> $retryCount")
+        } else {
+            TelephonyCenter.get().libW("Retry ALL -> $retryCount")
+        }
         if(retryCount >= maxRetryCount) {
             TelephonyCenter.get().libE("Can not retry sync this record ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)}")
             return
