@@ -2,8 +2,11 @@ ext {
     buildVersionInt = 29
     buildVersionName = '29.0.3'
 
-    kotlin_version = '1.3.50'
+    kotlin_version = '1.3.72'
+    dokka_version = '0.9.17'
 
+    GROUP_ID = 'com.clistery.app'
+    ARTIFACT_ID = 'callrecord'
     VERSION_CODE = 10
     VERSION_NAME = "1.3.8"
 
@@ -15,6 +18,8 @@ ext {
     artifactory_maven_user = properties.getProperty('artifactory.maven.user')
     artifactory_maven_pwd = properties.getProperty('artifactory.maven.pwd')
     artifactory_maven_publish_key = properties.getProperty('artifactory.maven.publish.key')
+
+    MAVEN_REPOSITORY_URL = "$artifactory_url$artifactory_maven_name"
 
     artifactoryMaven = {
         url "http://jfrog.fx:8088/artifactory/libs-release/"
