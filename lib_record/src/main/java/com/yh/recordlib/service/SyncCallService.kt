@@ -396,6 +396,12 @@ class SyncCallService : JobIntentService() {
             
             callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
                 if(systemRecords.isNotEmpty()) {
+                    if (systemRecords.size == 1) {
+                        // 只有一条记录的情况直接进行同步
+                        syncRecordBySys(recordCall, systemRecords.first())
+                        TelephonyCenter.get().libD("syncTargetRecord: just find single Sys record, sync this!")
+                        return@parseSystemCallRecords
+                    }
                     //                    TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $recordCall")
                     //                    syncRecordBySys(recordCall, systemRecords[0])
                     systemRecords.forEach sys@{ sr ->
