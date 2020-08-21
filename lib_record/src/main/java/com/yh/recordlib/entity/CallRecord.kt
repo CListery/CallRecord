@@ -40,7 +40,7 @@ open class CallRecord : RealmObject() {
         if(isValidTime(callOffHookTime)) {
             return callOffHookTime.div(1000)
         }
-        return 0
+        return getStartSecond()
     }
 
     fun getEndSecond(): Long {
