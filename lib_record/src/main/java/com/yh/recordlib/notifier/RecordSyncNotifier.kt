@@ -46,9 +46,9 @@ class RecordSyncNotifier private constructor() {
             ArrayList(mSyncCallbacks).forEach { event ->
                 callRecords.forEach { record ->
                     if(record.synced) {
-                        event.onSyncSuccess(record.recordId)
+                        event.onSyncSuccess(record)
                     } else {
-                        event.onSyncFail(record.recordId)
+                        event.onSyncFail(record)
                     }
                 }
             }

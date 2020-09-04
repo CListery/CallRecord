@@ -1,6 +1,7 @@
 package com.yh.recordlib
 
 import androidx.annotation.MainThread
+import com.yh.recordlib.entity.CallRecord
 
 /**
  * Created by CYH on 2019-06-24 16:16
@@ -8,7 +9,7 @@ import androidx.annotation.MainThread
 interface ISyncCallback {
     
     @MainThread
-    fun onSyncSuccess(recordId: String) {}
+    fun onSyncSuccess(record: CallRecord) {}
     @MainThread
-    fun onSyncFail(recordId: String) {}
+    fun onSyncFail(record: CallRecord) {}
 }

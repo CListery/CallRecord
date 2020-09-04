@@ -1,7 +1,5 @@
 package com.yh.recordlib.entity
 
-import android.os.Build
-import com.vicpin.krealmextensions.save
 import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import io.realm.RealmObject
@@ -30,21 +28,21 @@ open class CallRecord : RealmObject() {
     var callEndTime: Long = 0L
 
     fun getStartSecond(): Long {
-        if(isValidTime(callStartTime)) {
+        if (isValidTime(callStartTime)) {
             return callStartTime.div(1000)
         }
         return 0
     }
 
     fun getOffHookSecond(): Long {
-        if(isValidTime(callOffHookTime)) {
+        if (isValidTime(callOffHookTime)) {
             return callOffHookTime.div(1000)
         }
         return getStartSecond()
     }
 
     fun getEndSecond(): Long {
-        if(isValidTime(callEndTime)) {
+        if (isValidTime(callEndTime)) {
             return callEndTime.div(1000)
         }
         return 0
@@ -67,10 +65,12 @@ open class CallRecord : RealmObject() {
      * 是否以及与系统数据库同步
      */
     var synced: Boolean = false
+
     /**
      * 系统数据库中该通话记录的id
      */
     open var callLogId: Long = 0L
+
     /**
      * 系统数据库中该通话记录的持续时长
      */
@@ -82,10 +82,12 @@ open class CallRecord : RealmObject() {
      * 是否需要重新计算通话记录持续时长
      */
     var needRecalculated: Boolean = false
+
     /**
      * 重新计算持续时长标志位
      */
     var recalculated: Boolean = false
+
     /**
      * 系统数据库中该通话记录的类型
      * 0 - 未知
@@ -97,6 +99,7 @@ open class CallRecord : RealmObject() {
      * 6 - 系统拦截 - CallLog.Calls.BLOCKED_TYPE
      */
     var callState: Int = 0
+
     /**
      * 系统数据库中对应PHONE_ACCOUNT_ID
      * 0,1,2...
@@ -114,33 +117,38 @@ open class CallRecord : RealmObject() {
      */
     var isDeleted: Boolean = false
 
-    fun recalculateDuration() {
+    fun recalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")
-        if(!synced) {
+        if (!synced) {
             return
         }
-        if(recalculated) {
+        if (recalculated) {
             return
         }
 
-        if(phoneAccountId ?: -1 < 0) {
+        if (phoneAccountId ?: -1 < 0) {
             //未能获取到卡槽信息
-            if(hashTelecomCard()) {
-                internalRecalculateDuration()
+            if (hashTelecomCard()) {
+                internalRecalculateDuration(originStartTime, systemCallRecord)
             }
         } else {
-            if(checkNeedRecalculate()) {
-                internalRecalculateDuration()
+            if (checkNeedRecalculate()) {
+                internalRecalculateDuration(originStartTime, systemCallRecord)
             }
         }
     }
 
     /**
-     * 大于 1 分钟则认定为接通就不需要再计算
+     * 大于 80 秒则认定为接通就不需要再计算
      */
-    private fun internalRecalculateDuration() {
-        TelephonyCenter.get().libW("d:$duration - e:$callEndTime")
-        if(duration in 1..60) {
+    private fun internalRecalculateDuration(
+        originStartTime: Long,
+        systemCallRecord: SystemCallRecord
+    ) {
+        TelephonyCenter.get().libW("d:$duration - e:$callEndTime - ss:${systemCallRecord.date} - os:$originStartTime")
+
+        if (duration in 1..91) {
+            // 经测试最长的假通话时长可达到90秒
             needRecalculated = true
             if(callEndTime <= 0) {
                 //App 被系统回收，没有获取到结束时间，并且没获取到有效的 lastModify
@@ -149,29 +157,33 @@ open class CallRecord : RealmObject() {
                 } else {
                     callStartTime + getDurationMillis()
                 }
-                //为了防止 duration == tmpDuration 增加 5s 偏移
-                callEndTime += 5000
             }
+
+            if (systemCallRecord.date - originStartTime > 10000) {
+                // 系统通话记录开始时间大于本地通话记录开始时间
+                // 说明从开始呼出到接通期间有等待时间，即开始时间被系统重置过，通话时长是可信的
+                // 这里10s是考虑到网络等待时间，有可能先处于连接网络阶段，然后又开始错误计时
+                // 处于网络等待阶段是不计时的，所以取一个较长的10s来作为时间阀值
+                // 正常接通的情况下10s通话时长过短，可以过滤掉
+                recalculated = true
+                return
+            }
+
             val tmpDuration = min(
                 callEndTime - callOffHookTime, callEndTime - callStartTime
             ).div(1000)
             TelephonyCenter.get().libW("t:$tmpDuration")
-            if(duration == tmpDuration) {
-                if(Build.VERSION.SDK_INT < 27){
-                    //某些高版本机型已经修复了电信卡一开始拨打就记时的问题
-                    //一开始拨打就接通的情况是电信卡在安卓机上的 bug
+            if (duration == tmpDuration) {
+                //一开始拨打就接通的情况是电信卡在安卓机上的 bug
+                duration = 0
+                recalculated = true
+            } else if (duration < tmpDuration) {
+                if (tmpDuration - duration <= 2) {
+                    //接通过快也判定为电信卡bug
                     duration = 0
                     recalculated = true
                 }
-            }/*
-            暂不校验接通过快的情况
-            else if(duration < tmpDuration) {
-                if(tmpDuration - duration <= 2) {
-                    //接通过快视为已拨打就接通的情况
-                    duration = 0
-                    recalculated = true
-                }
-            }*/
+            }
         }
     }
 
@@ -185,14 +197,14 @@ open class CallRecord : RealmObject() {
         TelephonyCenter.get().libW("checkNeedRecalculate subId: $subscriptionId")
         var targetSimOperator = TelephonyCenter.get().getSimOperator(subscriptionId)
 
-        if(TelephonyCenter.SimOperator.Unknown == targetSimOperator) {
+        if (TelephonyCenter.SimOperator.Unknown == targetSimOperator) {
             val allSimOperator = TelephonyCenter.get().getAllSimOperator()
-            if(allSimOperator.isEmpty()) {
+            if (allSimOperator.isEmpty()) {
                 return false
             }
 
-            targetSimOperator = if(allSimOperator.size > 1) {
-                if(subscriptionId > 1) {
+            targetSimOperator = if (allSimOperator.size > 1) {
+                if (subscriptionId > 1) {
                     allSimOperator[1]
                 } else {
                     allSimOperator[0]
@@ -204,7 +216,7 @@ open class CallRecord : RealmObject() {
 
         this.mccMnc = targetSimOperator.mccMnc
 
-        if(TelephonyCenter.SimOperator.ChinaTELECOM != targetSimOperator) {
+        if (TelephonyCenter.SimOperator.ChinaTELECOM != targetSimOperator) {
             return false
         }
         return true

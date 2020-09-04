@@ -178,7 +178,7 @@ class SyncCallService : JobIntentService() {
                                             target = cr
                                         }
                                     }
-                                    if(timeOffset < 5000) { // 最大容许5s以内误差
+                                    if(timeOffset < 20000) { // 最大容许20s以内误差
                                         TelephonyCenter.get().libW("syncAllRecord: Use min time-offset: $timeOffset record: $target")
                                         target?.apply {
                                             syncRecordBySys(this, sr)
@@ -448,6 +448,7 @@ class SyncCallService : JobIntentService() {
     
     private fun syncRecordBySys(callRecord: CallRecord, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libD("syncRecordBySys: ${callRecord.isFake} -> $systemCallRecord")
+        val originStartTime = max(callRecord.callStartTime, callRecord.callOffHookTime)
         callRecord.callLogId = systemCallRecord.callId
         callRecord.callStartTime = systemCallRecord.date
         callRecord.duration = systemCallRecord.duration
@@ -466,7 +467,7 @@ class SyncCallService : JobIntentService() {
         }
         callRecord.synced = true
         
-        callRecord.recalculateDuration()
+        callRecord.recalculateDuration(originStartTime, systemCallRecord)
         
         callRecord.isDeleted = false
         callRecord.isNoMapping = false

@@ -6,6 +6,7 @@ apply plugin: 'realm-android'
 
 android {
     compileSdkVersion buildVersionInt
+    buildToolsVersion buildVersionName
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -30,20 +31,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField('boolean', 'ENABLE_DEBUG', 'false')
-        }
-        debug {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField('boolean', 'ENABLE_DEBUG', 'true')
-        }
-        dev {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField('boolean', 'ENABLE_DEBUG', 'true')
         }
     }
 
+    lintOptions {
+        abortOnError false
+    }
 }
 
 def getSDK19LayoutLibPath() {

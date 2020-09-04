@@ -90,12 +90,32 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
         }
     }
 
-    enum class SimOperator(val operatorName: String, val operatorArray: () -> Array<String>) {
-        ChinaTELECOM("中国电信", { getStringArray(R.array.MCCMNC_China_TELECOM) }),
-        ChinaMOBILE("中国移动", { getStringArray(R.array.MCCMNC_China_MOBILE) }),
-        ChinaUNICOM("中国联通", { getStringArray(R.array.MCCMNC_China_UNICOM) }),
-        ChinaTieTong("中移铁通", { getStringArray(R.array.MCCMNC_China_Tietong) }),
-        Unknown("未知运营商", { arrayOf() });
+    enum class SimOperator(val operatorName: String, val operatorArray: Array<String>) {
+        ChinaTELECOM(
+            "中国电信", arrayOf(
+                "46003",
+                "46005",
+                "46011"
+            )
+        ),
+        ChinaMOBILE(
+            "中国移动", arrayOf(
+                "46000",
+                "46002",
+                "46004",
+                "46007",
+                "46008"
+            )
+        ),
+        ChinaUNICOM(
+            "中国联通", arrayOf(
+                "46001",
+                "46006",
+                "46009"
+            )
+        ),
+        ChinaTieTong("中移铁通", arrayOf("46020")),
+        Unknown("未知运营商", arrayOf());
 
         var mccMnc: String = "unknown"
     }
@@ -358,7 +378,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
                 return SimOperator.Unknown.apply { this.mccMnc = origin }
             }
             for (simOperator in SimOperator.values().filter { it != SimOperator.Unknown }) {
-                val targetMccMnc = simOperator.operatorArray.invoke().find { it == origin }
+                val targetMccMnc = simOperator.operatorArray.find { it == origin }
                 if (null != targetMccMnc) {
                     return simOperator.apply { this.mccMnc = origin }
                 }

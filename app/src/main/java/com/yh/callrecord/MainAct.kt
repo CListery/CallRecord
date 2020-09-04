@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
 import android.view.View
+import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
 import com.yh.appinject.logger.ext.libD
 import com.yh.appinject.logger.ext.libW
@@ -11,12 +12,12 @@ import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.ISyncCallback
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
+import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.ext.queryLastRecord
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.service.RecordCallService
 import com.yh.recordlib.service.SyncCallService
-import kotlinx.android.synthetic.main.act_main.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -57,25 +58,25 @@ class MainAct : Activity(),
         
         CallRecordController.get()
             .registerRecordSyncListener(object : ISyncCallback {
-                override fun onSyncFail(recordId: String) {
-                    TelephonyCenter.get().libD("onSyncFail: $recordId")
+                override fun onSyncSuccess(record: CallRecord) {
+                    TelephonyCenter.get().libD("onSyncSuccess: $record")
                 }
-                
-                override fun onSyncSuccess(recordId: String) {
-                    TelephonyCenter.get().libD("onSyncSuccess: $recordId")
+
+                override fun onSyncFail(record: CallRecord) {
+                    TelephonyCenter.get().libD("onSyncFail: $record")
                 }
             })
         
         mLinker.bind()
-        
-        mSyncBtn?.setOnClickListener {
+
+        findViewById<View>(R.id.mSyncBtn)?.setOnClickListener {
             SyncCallService.enqueueWork(application)
         }
-        mCallBtn?.setOnClickListener {
+        findViewById<View>(R.id.mCallBtn)?.setOnClickListener {
             TelephonyCenter.get()
                 .call(this, "10010", mRecordService)
         }
-        mGetMCCMNC?.setOnClickListener {
+        findViewById<View>(R.id.mGetMCCMNC)?.setOnClickListener {
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator().operatorName}")
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator(1).operatorName}")
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator(2).operatorName}")
@@ -87,16 +88,16 @@ class MainAct : Activity(),
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(1)}")
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(2)}")
         }
-        mGetLastRecord?.setOnClickListener {
+        findViewById<View>(R.id.mGetLastRecord)?.setOnClickListener {
             queryLastRecord()?.apply {
-                mRecordLayout.visibility = View.VISIBLE
-                mMobileTxt.text = "Mobile: $phoneNumber\nFake: $isFake"
-                mDurationTxt.text = "Duration: $duration"
-                mCallTimeTxt.text = "CallTime: ${getFormatDate()}"
-                mSyncTxt.text = "Synced: $synced"
-                mSubIdTxt.text = "SubId: $phoneAccountId\nMccMnc: $mccMnc"
+                findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
+                findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber\nFake: $isFake"
+                findViewById<TextView>(R.id.mDurationTxt).text = "Duration: $duration"
+                findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${getFormatDate()}"
+                findViewById<TextView>(R.id.mSyncTxt).text = "Synced: $synced"
+                findViewById<TextView>(R.id.mSubIdTxt).text = "SubId: $phoneAccountId\nMccMnc: $mccMnc"
             } ?: apply {
-                mRecordLayout.visibility = View.GONE
+                findViewById<View>(R.id.mRecordLayout).visibility = View.GONE
             }
         }
     }
