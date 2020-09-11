@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.CallLog
 import android.text.TextUtils
 import androidx.core.app.JobIntentService
+import androidx.core.app.SafeJobIntentService
 import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.save
 import com.yh.appinject.logger.ext.libCursor
@@ -30,7 +31,7 @@ import kotlin.math.max
 /**
  * Created by CYH on 2019-05-30 15:50
  */
-class SyncCallService : JobIntentService() {
+class SyncCallService : SafeJobIntentService() {
     
     companion object {
         /**
