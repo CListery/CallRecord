@@ -6,19 +6,29 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
+import com.vicpin.krealmextensions.save
 import com.yh.appinject.logger.ext.libD
 import com.yh.appinject.logger.ext.libW
+import com.yh.appinject.logger.logD
+import com.yh.appinject.logger.logE
+import com.yh.appinject.logger.logP
+import com.yh.appinject.logger.logW
 import com.yh.recordlib.CallRecordController
+import com.yh.recordlib.IManualSyncCallback
 import com.yh.recordlib.ISyncCallback
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.entity.CallRecord
+import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.ext.queryLastRecord
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.service.RecordCallService
 import com.yh.recordlib.service.SyncCallService
+import java.io.File
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 
 /**
  * Created by CYH on 2019-05-30 08:53
@@ -35,6 +45,22 @@ class MainAct : Activity(),
     private val mRecordCallback: IRecordCallback = object : IRecordCallback {
         override fun onRecordIdCreated(recordId: String) {
             mLastRecordId = recordId
+        }
+    }
+    
+    private val mManualSyncListener by lazy {
+        object : IManualSyncCallback {
+            override fun onSyncDone(logFile: File) {
+                logW(logFile)
+            }
+    
+            override fun onSyncSuccess(record: CallRecord) {
+                logW("onSyncSuccess: ${record.recordId}")
+            }
+    
+            override fun onSyncFail(record: CallRecord) {
+                logE("onSyncFail: ${record.recordId}")
+            }
         }
     }
     
@@ -59,16 +85,16 @@ class MainAct : Activity(),
         CallRecordController.get()
             .registerRecordSyncListener(object : ISyncCallback {
                 override fun onSyncSuccess(record: CallRecord) {
-                    TelephonyCenter.get().libD("onSyncSuccess: $record")
+                    logD("onSyncSuccess: $record")
                 }
-
+                
                 override fun onSyncFail(record: CallRecord) {
-                    TelephonyCenter.get().libD("onSyncFail: $record")
+                    logE("onSyncFail: $record")
                 }
             })
         
         mLinker.bind()
-
+        
         findViewById<View>(R.id.mSyncBtn)?.setOnClickListener {
             SyncCallService.enqueueWork(application)
         }
@@ -96,8 +122,23 @@ class MainAct : Activity(),
                 findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${getFormatDate()}"
                 findViewById<TextView>(R.id.mSyncTxt).text = "Synced: $synced"
                 findViewById<TextView>(R.id.mSubIdTxt).text = "SubId: $phoneAccountId\nMccMnc: $mccMnc"
-            } ?: apply {
-                findViewById<View>(R.id.mRecordLayout).visibility = View.GONE
+            }
+                ?: apply {
+                    findViewById<View>(R.id.mRecordLayout).visibility = View.GONE
+                }
+        }
+        findViewById<View>(R.id.mManualSync)?.setOnClickListener {
+            CallRecordController.get().registerRecordSyncListener(mManualSyncListener)
+            val record = CallRecord()
+            record.recordId = UUID.randomUUID().toString().replace("-", "")
+            record.phoneNumber = "18988447486"
+            record.callStartTime = 1599909960000
+            record.callType = CallType.CallOut.ordinal
+            record.isNoMapping = true
+            record.save()
+            thread {
+                Thread.sleep(500)
+                CallRecordController.get().manualSyncRecord(record, cacheDir.absolutePath, "msr_${record.phoneNumber}")
             }
         }
     }
@@ -110,8 +151,9 @@ class MainAct : Activity(),
     }
     
     override fun onDestroy() {
-        super.onDestroy()
+        CallRecordController.get().clearManualSyncListener()
         mLinker.unbind()
+        super.onDestroy()
     }
     
     override fun onBind() {

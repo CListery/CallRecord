@@ -33,7 +33,7 @@ fun Cursor.parseSystemRecord(
     columnIndexDuration: Int,
     columnIndexType: Int,
     columnIndexSubscriptionId: Int,
-    columnIndexNumber: Int,
+    numberColumnIndexes: Array<Int>,
     columnIndexLastModified: Int
 ): SystemCallRecord {
     return SystemCallRecord().apply {
@@ -43,7 +43,13 @@ fun Cursor.parseSystemRecord(
         type = get(columnIndexType, -1)
         //这个获取不到也不影响，recalculateDuration 会处理通话时长
         phoneAccountId = get(columnIndexSubscriptionId, -1)
-        phoneNumber = TelephonyCenter.get().filterGarbageInPhoneNumber(get(columnIndexNumber, ""))
+        numberColumnIndexes.forEach {
+            val tmpNumber = get(it, "")
+            if(tmpNumber.isNotEmpty()){
+                phoneNumber = TelephonyCenter.get().filterGarbageInPhoneNumber(tmpNumber)
+                return@forEach
+            }
+        }
         lastModify = get(columnIndexLastModified, -1L)
     }
 }
@@ -79,6 +85,7 @@ fun Cursor?.parseSystemCallRecords(
             index
         }
         val columnIndexNumber = result.getColumnIndex(CallLog.Calls.NUMBER)
+        val columnIndexMatchedNumber = result.getColumnIndex("matched_number")
         val columnIndexLastModified = result.getColumnIndex("last_modified")
         
         do {
@@ -89,7 +96,7 @@ fun Cursor?.parseSystemCallRecords(
                     columnIndexDuration,
                     columnIndexType,
                     columnIndexSubscriptionId,
-                    columnIndexNumber,
+                    arrayOf(columnIndexNumber, columnIndexMatchedNumber),
                     columnIndexLastModified
                 )
             )

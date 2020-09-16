@@ -1,6 +1,7 @@
 package com.yh.recordlib.utils
 
 import android.util.Base64
+import com.yh.recordlib.BuildConfig
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import kotlin.experimental.and
@@ -29,7 +30,9 @@ fun makeRandomUUID(needSplit: Boolean = false): String {
     md5Bytes[8] = md5Bytes[8] and 0x3f.toByte()  /* clear variant        */
     md5Bytes[8] = md5Bytes[8] or 0x80.toByte()   /* set to IETF variant  */
     
-    assert(md5Bytes.size == 16) { "data must be 16 bytes in length" }
+    if(BuildConfig.DEBUG && md5Bytes.size != 16) {
+        error("data must be 16 bytes in length")
+    }
     
     for(i in 0..15) md5Bytes[i] = md5Bytes[i] and (Math.random() * 255).toByte()
     

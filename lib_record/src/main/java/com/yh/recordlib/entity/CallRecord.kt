@@ -116,6 +116,11 @@ open class CallRecord : RealmObject() {
      * true: 长时间不能在系统数据库中找到该条记录
      */
     var isDeleted: Boolean = false
+    
+    /**
+     * 是否已手动同步过
+     */
+    var isManualSynced: Boolean = false
 
     fun recalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")

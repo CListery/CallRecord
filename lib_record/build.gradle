@@ -21,6 +21,7 @@ android {
         versionCode VERSION_CODE
         versionName VERSION_NAME
 
+        buildConfigField('long', 'RECORD_DB_VERSION', '1')
         buildConfigField('String', 'CALL_RECORD_DB', '"call_record.realm"')
         buildConfigField('long', 'CALL_RECORD_RETRY_TIME', '5000')
         buildConfigField('long', 'MAX_CALL_TIME_OFFSET', '60000')
@@ -71,7 +72,7 @@ dependencies {
     implementation 'com.codezjx.library:andlinker:0.7.1'
 
     getSDK19LayoutLibPath().forEach{ compileOnly files(it) }
-    implementation 'com.clistery.app:appinject:1.3.4'
+    implementation 'com.clistery.app:appinject:1.3.5'
 }
 
 task androidJavadocs(type: Javadoc) {

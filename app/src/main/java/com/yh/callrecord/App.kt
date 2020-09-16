@@ -8,6 +8,7 @@ import android.os.Handler
 import android.provider.CallLog
 import android.text.TextUtils
 import android.util.Log
+import com.yh.appinject.logger.LogsManager
 import com.yh.appinject.logger.logD
 import com.yh.appinject.logger.logW
 import com.yh.callrecord.db.CallRecordDBMigration
@@ -56,6 +57,8 @@ class App : Application(), IRecordAppInject {
             return
         }
 
+        LogsManager.get().setDefLoggerConfig(appConfig = true to Log.VERBOSE)
+        
         TelephonyCenter.get().register(this)
         TelephonyCenter.get().loggerConfig(true to Log.VERBOSE)
         val dbFileDirName =
