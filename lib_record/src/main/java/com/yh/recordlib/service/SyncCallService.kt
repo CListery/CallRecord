@@ -1,14 +1,20 @@
 package com.yh.recordlib.service
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.os.Build
+import android.os.Process
 import android.provider.CallLog
 import android.text.TextUtils
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.core.app.SafeJobIntentService
+import androidx.core.content.ContextCompat
+import androidx.core.content.PermissionChecker
 import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.save
 import com.yh.appinject.logger.LibLogs
@@ -18,6 +24,7 @@ import com.yh.appinject.logger.ext.libE
 import com.yh.appinject.logger.ext.libP
 import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.impl.TheLogAdapter
+import com.yh.appinject.logger.logE
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
@@ -85,11 +92,20 @@ class SyncCallService : SafeJobIntentService() {
         }
         val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
         printLog(Log.WARN, "onHandleWork: $recordId - $isManualSync")
+        if(!hasCallLogPermission()){
+            printLog(Log.ERROR, "No permission operator call_log!")
+            return
+        }
         if(null == recordId || TextUtils.isEmpty(recordId)) {
             syncAllRecord(work)
         } else {
             syncTargetRecord(work, recordId)
         }
+    }
+    
+    private fun hasCallLogPermission(): Boolean {
+        return PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(applicationContext,
+            Manifest.permission.READ_CALL_LOG)
     }
     
     private fun syncAllRecord(work: Intent) {

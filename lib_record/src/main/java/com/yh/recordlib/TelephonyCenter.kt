@@ -19,6 +19,7 @@ import androidx.annotation.ArrayRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.PermissionChecker
 import com.android.internal.telephony.IPhoneSubInfo
 import com.android.internal.telephony.ITelephony
 import com.android.internal.telephony.ITelephonyRegistry
@@ -574,7 +575,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             libW("call fail!")
             return
         }
-        if (PackageManager.PERMISSION_DENIED == ContextCompat.checkSelfPermission(
+        if (PermissionChecker.PERMISSION_GRANTED != PermissionChecker.checkSelfPermission(
                 context,
                 Manifest.permission.CALL_PHONE
             )
