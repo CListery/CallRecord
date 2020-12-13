@@ -270,12 +270,12 @@ class SyncCallService : SafeJobIntentService() {
     
     private fun markNoMappingRecord(allUnSyncRecords: ArrayList<CallRecord>) {
         allUnSyncRecords.forEach {
-            if(System.currentTimeMillis() - it.callStartTime > 7200000) {
-                //2小时未能成功同步,标记为删除状态
-                it.isDeleted = true
-            }
             if(isManualSync){
                 it.isManualSynced = true
+            }
+            if(it.isManualSynced && System.currentTimeMillis() - it.callStartTime > 7200000) {
+                //已经手动同步过，且2小时未能成功同步,标记为删除状态
+                it.isDeleted = true
             }
             it.isNoMapping = true
             it.save()
