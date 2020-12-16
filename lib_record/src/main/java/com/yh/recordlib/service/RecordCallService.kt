@@ -199,6 +199,7 @@ class RecordCallService : Service() {
         record.callType = callType.ordinal
         record.callStartTime = System.currentTimeMillis()
         record.phoneNumber = recordPhoneNumber
+        record.hasChinaTELECOM = TelephonyCenter.get().hasTelecomCard()
         record.save()
         mLastRecordId = recordId
         mRecordCallback?.onRecordIdCreated(recordId)

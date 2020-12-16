@@ -8,7 +8,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.ServiceManager
@@ -18,7 +17,6 @@ import android.text.TextUtils
 import androidx.annotation.ArrayRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import com.android.internal.telephony.IPhoneSubInfo
 import com.android.internal.telephony.ITelephony
@@ -553,6 +551,13 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             }
         }
         return true
+    }
+    
+    /**
+     * 是否有电信卡
+     */
+    fun hasTelecomCard(): Boolean {
+        return getAllSimOperator().contains(SimOperator.ChinaTELECOM)
     }
 
     /**

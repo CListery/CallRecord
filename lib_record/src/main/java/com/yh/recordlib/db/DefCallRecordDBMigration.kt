@@ -51,6 +51,12 @@ class DefCallRecordDBMigration(private val realmMigration: RealmMigration?) : Re
             }
             oldMainVersion++
         }
+        if(1L == oldMainVersion){
+            schema.get("CallRecord")?.addField("hasChinaTELECOM", Boolean::class.java)?.transform {
+                it.set("hasChinaTELECOM", false)
+            }
+            oldMainVersion++
+        }
         if(oldVersions.second < newVersions.second) {
             realmMigration?.migrate(realm, oldVersions.second, newVersions.second)
         }

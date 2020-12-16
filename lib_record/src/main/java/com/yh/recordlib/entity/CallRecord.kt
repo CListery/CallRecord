@@ -122,6 +122,11 @@ open class CallRecord : RealmObject() {
      */
     var isManualSynced: Boolean = false
 
+    /**
+     * 拨打时是否有电信卡
+     */
+    var hasChinaTELECOM: Boolean = false
+
     fun recalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")
         if (!synced) {
@@ -133,7 +138,7 @@ open class CallRecord : RealmObject() {
 
         if (phoneAccountId ?: -1 < 0) {
             //未能获取到卡槽信息
-            if (hashTelecomCard()) {
+            if (hasChinaTELECOM) {
                 internalRecalculateDuration(originStartTime, systemCallRecord)
             }
         } else {
@@ -190,11 +195,6 @@ open class CallRecord : RealmObject() {
                 }
             }
         }
-    }
-
-    private fun hashTelecomCard(): Boolean {
-        return TelephonyCenter.get().getAllSimOperator()
-            .contains(TelephonyCenter.SimOperator.ChinaTELECOM)
     }
 
     private fun checkNeedRecalculate(): Boolean {
