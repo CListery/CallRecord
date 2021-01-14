@@ -14,15 +14,17 @@ import java.util.*
 class ManualSyncLogFormatStrategy(builder: Builder) : FormatStrategy {
     
     companion object {
-        private const val TAG = "ManualSyncLog"
+        private const val LOG_NAME = "MSL"
         
         private const val HORIZONTAL_LINE = "|"
         private const val NEW_LINE = "\n"
-        private const val SEPARATOR = ","
+        private const val HEAD_SEPARATOR = "-> "
+        private const val CONTENT_SEPARATOR = " "
     }
     
     private val date: Date = Date()
-    private val dateFormat: SimpleDateFormat = SimpleDateFormat("yyyy.MM.dd HH:mm:ss.SSS", Locale.UK)
+    private val dateFormat: SimpleDateFormat =
+        SimpleDateFormat("yyyy.MM.dd_HH:mm:ss.SSS", Locale.UK)
     private val logStrategy: LogStrategy = builder.logStrategy
     private var logFile: File = builder.logFile!!
     
@@ -33,40 +35,41 @@ class ManualSyncLogFormatStrategy(builder: Builder) : FormatStrategy {
         
         val builder = StringBuilder()
         
-        // machine-readable date/time
-        builder.append(date.time.toString())
-        
-        // human-readable date/time
-        builder.append(SEPARATOR)
-        builder.append(dateFormat.format(date))
-        
-        // level
-        builder.append(SEPARATOR)
-        builder.append(logLevel(priority))
-        
-        // tag
-        builder.append(SEPARATOR)
-        builder.append(TAG)
-        
-        builder.append(SEPARATOR)
         // message
-        logContent(builder, builder.toString(), message.replace(SEPARATOR, ";"))
+        logContent(buildHeader(priority), builder, message)
         
-        logStrategy.log(priority, TAG, builder.toString())
+        logStrategy.log(priority, "", builder.toString())
     }
     
-    private fun logContent(builder: StringBuilder, header: String, @NonNull message: String) {
+    private fun logContent(
+        @NonNull header: String,
+        @NonNull builder: StringBuilder,
+        @NonNull message: String
+    ) {
         val msgArr = message.split("\n")
         if(msgArr.size > 1) {
             msgArr.forEachIndexed { index, msg ->
-                if(index > 0){
-                    builder.append(header)
-                }
-                builder.append("$HORIZONTAL_LINE $msg").append(NEW_LINE)
+                builder.append(header).append("$HORIZONTAL_LINE $msg").append(NEW_LINE)
             }
         } else {
-            builder.append(message).append(NEW_LINE)
+            builder.append(header).append(message).append(NEW_LINE)
         }
+    }
+    
+    private fun buildHeader(priority: Int): String {
+        val builder = StringBuilder()
+        
+        // date/time
+        builder.append(dateFormat.format(date))
+        builder.append(CONTENT_SEPARATOR)
+        
+        // level
+        builder.append(logLevel(priority))
+        builder.append("/")
+        // tag
+        builder.append(LOG_NAME)
+        builder.append(HEAD_SEPARATOR)
+        return builder.toString()
     }
     
     override fun release() {

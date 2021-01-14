@@ -2,18 +2,15 @@ package com.yh.recordlib.service
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ContentProviderClient
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.database.Cursor
 import android.os.Build
-import android.os.Process
 import android.provider.CallLog
 import android.text.TextUtils
 import android.util.Log
-import androidx.core.app.ActivityCompat
 import androidx.core.app.SafeJobIntentService
-import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import com.vicpin.krealmextensions.delete
 import com.vicpin.krealmextensions.save
@@ -24,10 +21,10 @@ import com.yh.appinject.logger.ext.libE
 import com.yh.appinject.logger.ext.libP
 import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.impl.TheLogAdapter
-import com.yh.appinject.logger.logE
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
+import com.yh.recordlib.db.DefCallRecordDBMigration
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.entity.FakeCallRecord
@@ -37,6 +34,7 @@ import com.yh.recordlib.ext.findRecordById
 import com.yh.recordlib.ext.parseSystemCallRecords
 import com.yh.recordlib.log.ManualSyncLogFormatStrategy
 import com.yh.recordlib.notifier.RecordSyncNotifier
+import com.yh.recordlib.utils.DeviceUtils
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -386,21 +384,12 @@ class SyncCallService : SafeJobIntentService() {
             return
         }
         
-        val callLogClient =
-            contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
+        val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
         if(null == callLogClient) {
-            printLog(
-                Log.ERROR,
-                "Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!"
-            )
+            printLog(Log.ERROR, "Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
+            // TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
             return
-        } else {
-            printLog(
-                Log.DEBUG,
-                "${CallLog.Calls.CONTENT_URI} ContentProvider is loaded!"
-            )
         }
-        // TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
         
         try {
             val selection = StringBuilder()
@@ -430,7 +419,7 @@ class SyncCallService : SafeJobIntentService() {
                 callEndTime.toString()
             )
             
-            if(!recordCall.isFake) {
+            if(!recordCall.isFake && !TextUtils.isEmpty(recordCall.phoneNumber)) {
                 selection.append(" ")
                 selection.append("and")
                 selection.append(" ")
@@ -515,6 +504,9 @@ class SyncCallService : SafeJobIntentService() {
                     "syncTargetRecord: Not found sys mapping record!! -> $recordCall"
                 )
                 // TelephonyCenter.get().libW("syncTargetRecord: Not found sys mapping record!! -> $recordCall")
+                if(isManualSync) {
+                    submitSysRecords(callLogClient, recordCall)
+                }
                 markNoMappingRecord(arrayListOf(recordCall))
                 if(!isManualSync) {
                     CallRecordController.get().retry(work)
@@ -525,6 +517,9 @@ class SyncCallService : SafeJobIntentService() {
                     "syncTargetRecord: Not found any record with $selection from system db! -> $recordCall"
                 )
                 // TelephonyCenter.get().libW("syncTargetRecord: Not found any record with $selection from system db! -> $recordCall")
+                if(isManualSync) {
+                    submitSysRecords(callLogClient, recordCall)
+                }
                 markNoMappingRecord(arrayListOf(recordCall))
                 if(!isManualSync) {
                     CallRecordController.get().retry(work)
@@ -546,7 +541,142 @@ class SyncCallService : SafeJobIntentService() {
         }
     }
     
+    private fun submitSysRecords(callLogClient: ContentProviderClient, recordCall: CallRecord) {
+        printLog(Log.INFO, "==============[BEGIN SYS RECORDS]==============")
+    
+        printLog(Log.INFO, "|| [CALL RECORD]")
+        printLog(Log.INFO, recordCall)
+    
+        if(!recordCall.isFake && !TextUtils.isEmpty(recordCall.phoneNumber)) {
+            printLog(Log.INFO, "|| [THIS RECORD NOT FAKE]")
+            printLog(Log.INFO, "|| callRecord phone: ${recordCall.phoneNumber}")
+        }
+    
+        val selection = StringBuilder()
+        selection.append(CallLog.Calls.DATE)
+        selection.append(" ")
+        selection.append("BETWEEN")
+        selection.append(" ")
+        selection.append("?")
+        selection.append(" ")
+        selection.append("AND")
+        selection.append(" ")
+        selection.append("?")
+    
+        val callStartTime = recordCall.callStartTime.minus(
+            TelephonyCenter.get().getRecordConfigure().minCallTimeOffset
+        )
+        val callEndTime = if(recordCall.callEndTime <= 0L) {
+            callStartTime + 1800000
+        } else {
+            recordCall.callEndTime.plus(
+                TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
+            )
+        }
+    
+        val args: ArrayList<String> = arrayListOf(
+            callStartTime.toString(),
+            callEndTime.toString()
+        )
+    
+        val sort = CallLog.Calls.DEFAULT_SORT_ORDER
+    
+        try {
+            printLog(Log.INFO, "|| [SELECTION]")
+            printLog(
+                Log.DEBUG,
+                "selection: ${selection.toString().replace("?", "%s")
+                    .format(*args.toArray())} $sort"
+            )
+        } catch(e: Exception) {
+            printLog(Log.ERROR, "submitSysRecords", e)
+        }
+    
+        try {
+            printLog(Log.INFO, "|| [SYS RECORDS]")
+            val systemRecords = callLogClient.query(
+                CallLog.Calls.CONTENT_URI,
+                null,
+                selection.toString(),
+                args.toArray(arrayOf<String>()),
+                sort
+            )
+            printLog(Log.INFO, systemRecords)
+            systemRecords?.close()
+        } catch(e: Exception) {
+            printLog(Log.ERROR, "submitSysRecords", e)
+        }
+    
+        printLog(Log.INFO, "===============[END SYS RECORDS]===============")
+    }
+    
+    private fun printOtherInfo() {
+        printConfigInfo()
+        printMobileInfo()
+        printDeviceInfo()
+    }
+    
+    private fun printConfigInfo() {
+        printLog(Log.INFO, "==============[START CONFIGURE INFO]==============")
+        try {
+            val configure = TelephonyCenter.get().getRecordConfigure()
+            printLog(Log.INFO, "|| CTX: ${configure.ctx}")
+            printLog(Log.INFO, "|| INIT_SYNC: ${configure.needInitSync}")
+            printLog(Log.INFO, "|| DB_DIR: ${configure.dbFileDirName.invoke()}")
+            printLog(
+                Log.INFO,
+                "|| DB_VER_LIB: ${DefCallRecordDBMigration.getVersions(configure.dbVersion).first}"
+            )
+            printLog(
+                Log.INFO,
+                "|| DB_VER_APP: ${DefCallRecordDBMigration.getVersions(configure.dbVersion).second}"
+            )
+            printLog(Log.INFO, "|| SRT: ${(configure.syncRetryTime / 1000)}s")
+            printLog(Log.INFO, "|| MRC: ${configure.maxRetryCount}")
+            printLog(Log.INFO, "|| MAX_OFFSET: ${(configure.maxCallTimeOffset / 1000)}s")
+            printLog(Log.INFO, "|| MIN_OFFSET: ${(configure.minCallTimeOffset / 1000)}s")
+        } catch(e: Exception) {
+            printLog(Log.ERROR, "printConfigInfo", throwable = e)
+        }
+        printLog(Log.INFO, "===============[END CONFIGURE INFO]===============")
+    }
+    
+    private fun printMobileInfo() {
+        printLog(Log.INFO, "==============[START MOBILE INFO]==============")
+        try {
+            printLog(Log.INFO, "|| ASO: ${TelephonyCenter.get().getAllSimOperator()}")
+            printLog(Log.INFO, "|| MSC: ${TelephonyCenter.get().getMultiSimConfiguration().name}")
+            printLog(Log.INFO, "|| PN0: ${TelephonyCenter.get().getPhoneNumber()}")
+            printLog(Log.INFO, "|| PN1: ${TelephonyCenter.get().getPhoneNumber(1)}")
+            printLog(Log.INFO, "|| PN2: ${TelephonyCenter.get().getPhoneNumber(2)}")
+            printLog(Log.INFO, "|| ISN0: ${TelephonyCenter.get().getIccSerialNumber()}")
+            printLog(Log.INFO, "|| ISN1: ${TelephonyCenter.get().getIccSerialNumber(1)}")
+            printLog(Log.INFO, "|| ISN2: ${TelephonyCenter.get().getIccSerialNumber(2)}")
+        } catch(e: Exception) {
+            printLog(Log.ERROR, "printMobileInfo", throwable = e)
+        }
+        printLog(Log.INFO, "===============[END MOBILE INFO]===============")
+    }
+    
+    private fun printDeviceInfo() {
+        printLog(Log.INFO, "==============[START DEVICE INFO]==============")
+        try {
+            DeviceUtils.getMemoryInfo().forEach {
+                printLog(Log.INFO, "|| $it")
+            }
+            DeviceUtils.getExternalAndInternalStorageInfo().forEach {
+                printLog(Log.INFO, "|| $it")
+            }
+        } catch(e: Exception) {
+            printLog(Log.ERROR, "printDeviceInfo", throwable = e)
+        }
+        printLog(Log.INFO, "===============[END DEVICE INFO]===============")
+    }
+    
     private fun printEnd() {
+        if(isManualSync) {
+            printOtherInfo()
+        }
         manualSyncLogAdapter?.release()
         RecordSyncNotifier.get().notifyManualSyncDone(strategy?.getRealLogFile())
     }

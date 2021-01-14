@@ -117,6 +117,11 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
         Unknown("未知运营商", arrayOf());
 
         var mccMnc: String = "unknown"
+        var iccid: String = "unknown"
+        
+        override fun toString(): String {
+            return "$operatorName(mccMnc='$mccMnc', iccid='$iccid')"
+        }
     }
 
     /**
@@ -324,7 +329,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
                 TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC + ".2", ""
             )
 
-            if (null == allMccMnc.getOrNull(0)) {
+            if (TextUtils.isEmpty(allMccMnc.getOrNull(0))) {
                 if (TextUtils.isEmpty(sim1MccMnc)) {
                     sim1MccMnc = getIccSerialNumber(0)
                 }
@@ -333,7 +338,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
                 allMccMnc.add(0, sim1MccMnc)
             }
 
-            if (null == allMccMnc.getOrNull(1)) {
+            if (TextUtils.isEmpty(allMccMnc.getOrNull(1))) {
                 if (TextUtils.isEmpty(sim1MccMnc)) {
                     sim2MccMnc = getIccSerialNumber(2)
                 }
@@ -356,7 +361,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
      * 通过 MCCMNC or ICCID 解析运营商
      */
     fun parseSimOperator(origin: String?): SimOperator {
-        if (null == origin) return SimOperator.Unknown
+        if (null == origin || TextUtils.isEmpty(origin)) return SimOperator.Unknown
         if (origin.length >= 20) {//iccid
             //中国移动编码格式
             //89860 0MFSS YYGXX XXXXP
@@ -367,22 +372,18 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             //中国电信编码格式
             //89860 3MYYH HHXXX XXXXX
             return when (origin.substring(0, 6)) {
-                "898600" -> SimOperator.ChinaMOBILE
-                "898601" -> SimOperator.ChinaUNICOM
-                "898603" -> SimOperator.ChinaTELECOM
-                else -> SimOperator.Unknown
+                "898600" -> SimOperator.ChinaMOBILE.apply { this.iccid = origin }
+                "898601" -> SimOperator.ChinaUNICOM.apply { this.iccid = origin }
+                "898603" -> SimOperator.ChinaTELECOM.apply { this.iccid = origin }
+                else -> SimOperator.Unknown.apply { this.iccid = origin }
             }
         } else {//mccmnc
-            if (TextUtils.isEmpty(origin)) {
-                return SimOperator.Unknown.apply { this.mccMnc = origin }
+            val operatorFilter = fun(simOperator: SimOperator, key: String): Boolean {
+                return null != simOperator.operatorArray.find { it == key }
             }
-            for (simOperator in SimOperator.values().filter { it != SimOperator.Unknown }) {
-                val targetMccMnc = simOperator.operatorArray.find { it == origin }
-                if (null != targetMccMnc) {
-                    return simOperator.apply { this.mccMnc = origin }
-                }
-            }
-            return SimOperator.Unknown.apply { this.mccMnc = origin }
+            return SimOperator.values().filter { it != SimOperator.Unknown }
+                .find { operatorFilter(it, origin) }?.apply { this.mccMnc = origin }
+                ?: SimOperator.Unknown.apply { this.mccMnc = origin }
         }
     }
 
