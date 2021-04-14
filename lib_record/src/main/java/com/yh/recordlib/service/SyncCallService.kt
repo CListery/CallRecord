@@ -710,6 +710,7 @@ class SyncCallService : SafeJobIntentService() {
         val originStartTime = max(callRecord.callStartTime, callRecord.callOffHookTime)
         callRecord.callLogId = systemCallRecord.callId
         callRecord.callStartTime = systemCallRecord.date
+        callRecord.callOffHookTime = callRecord.callStartTime
         callRecord.duration = systemCallRecord.duration
         callRecord.callState = systemCallRecord.type
         callRecord.phoneAccountId = systemCallRecord.phoneAccountId
