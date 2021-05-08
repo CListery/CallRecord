@@ -11,7 +11,6 @@ import com.yh.appinject.logger.ext.libD
 import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.logD
 import com.yh.appinject.logger.logE
-import com.yh.appinject.logger.logP
 import com.yh.appinject.logger.logW
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.IManualSyncCallback
@@ -44,7 +43,24 @@ class MainAct : Activity(),
     
     private val mRecordCallback: IRecordCallback = object : IRecordCallback {
         override fun onRecordIdCreated(recordId: String) {
+            logD("onRecordIdCreated: $recordId")
             mLastRecordId = recordId
+        }
+    
+        override fun onCallIn(recordId: String) {
+            logD("onCallIn: $recordId")
+        }
+    
+        override fun onCallOut(recordId: String) {
+            logD("onCallOut: $recordId")
+        }
+    
+        override fun onCallEnd(recordId: String) {
+            logD("onCallEnd: $recordId")
+        }
+    
+        override fun onCallOffHook(recordId: String) {
+            logD("onCallOffHook: $recordId")
         }
     }
     

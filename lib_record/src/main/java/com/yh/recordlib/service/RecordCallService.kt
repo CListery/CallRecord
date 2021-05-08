@@ -122,6 +122,7 @@ class RecordCallService : Service() {
                             SyncCallService.enqueueWork(
                                 applicationContext, mLastRecordId
                             )
+                            mRecordCallback?.onCallEnd(lastRecord.recordId)
                         }
                     }
                     MediaRecordHelper.get(application).stopRecord()
@@ -136,6 +137,7 @@ class RecordCallService : Service() {
                     mCurrentState = state
                     val callRecord = makeRecord(phoneNumber, CallType.CallIn)
                     MediaRecordHelper.get(application).startRecord(callRecord)
+                    mRecordCallback?.onCallIn(callRecord.recordId)
                 }
             }
             
@@ -162,6 +164,8 @@ class RecordCallService : Service() {
                     callRecord.callOffHookTime = System.currentTimeMillis()
                     callRecord.save()
                     MediaRecordHelper.get(application).startRecord(callRecord)
+                    mRecordCallback?.onCallOut(callRecord.recordId)
+                    mRecordCallback?.onCallOffHook(callRecord.recordId)
                 } else if(TelephonyManager.CALL_STATE_RINGING == mCurrentState) {
                     //呼入接听
                     mCurrentState = state
@@ -173,6 +177,7 @@ class RecordCallService : Service() {
                         callRecord.callOffHookTime = System.currentTimeMillis()
                         callRecord.save()
                         MediaRecordHelper.get(application).startRecord(callRecord)
+                        mRecordCallback?.onCallOffHook(callRecord.recordId)
                     }
                 }
             }

@@ -9,4 +9,9 @@ import com.codezjx.andlinker.annotation.RemoteInterface
 interface IRecordCallback {
     
     fun onRecordIdCreated(recordId: String)
+    fun onCallIn(recordId: String)
+    fun onCallOut(recordId: String)
+    fun onCallEnd(recordId: String)
+    fun onCallOffHook(recordId: String)
+    
 }
