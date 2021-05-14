@@ -4,7 +4,7 @@ import io.realm.RealmObject
 import io.realm.annotations.RealmClass
 
 @RealmClass
-open class SystemCallRecord : RealmObject() {
+open class SystemCallRecord : RealmObject(), Comparable<SystemCallRecord> {
     
     var callId: Long = -1L
     var date: Long = -1L
@@ -20,5 +20,9 @@ open class SystemCallRecord : RealmObject() {
     
     override fun toString(): String {
         return "SystemCallRecord(callId=$callId, date=$date, lastModify=$lastModify, duration=$duration, type=$type, phoneAccountId=$phoneAccountId, phoneNumber='$phoneNumber')"
+    }
+    
+    override fun compareTo(other: SystemCallRecord): Int {
+        return date.compareTo(other.date)
     }
 }

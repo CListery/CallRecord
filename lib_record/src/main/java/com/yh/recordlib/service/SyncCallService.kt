@@ -180,8 +180,8 @@ class SyncCallService : SafeJobIntentService() {
                             coarseFilter(sr, cr)
                         }
                         if(targetRecords.isNotEmpty()) {
-            
-                            targetRecords = precisionFilter(sr, targetRecords)
+                            val maxOffset = reloadMaxOffset(sr, targetRecords.first())
+                            targetRecords = precisionFilter(sr, targetRecords, 0, maxOffset)
             
                             when {
                                 targetRecords.size == 1 -> {
@@ -266,6 +266,14 @@ class SyncCallService : SafeJobIntentService() {
         }
     }
     
+    private fun reloadMaxOffset(sr: SystemCallRecord, cr: CallRecord): Long {
+        var maxOffset = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
+        if(sr.date - cr.callStartTime > TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset) {
+            maxOffset = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset * 3
+        }
+        return maxOffset
+    }
+    
     private fun markNoMappingRecord(allUnSyncRecords: ArrayList<CallRecord>) {
         allUnSyncRecords.forEach {
             if(isManualSync){
@@ -282,15 +290,15 @@ class SyncCallService : SafeJobIntentService() {
         RecordSyncNotifier.get().notifyRecordSyncStatus(allUnSyncRecords)
     }
     
-    private fun precisionFilter(sr: SystemCallRecord, crs: List<CallRecord>, precisionCount: Int = 0): List<CallRecord> {
-        if(precisionCount > TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset / TelephonyCenter.get().getRecordConfigure().minCallTimeOffset) {
+    private fun precisionFilter(sr: SystemCallRecord, crs: List<CallRecord>, precisionCount: Int, maxOffset: Long): List<CallRecord> {
+        if(precisionCount > maxOffset / TelephonyCenter.get().getRecordConfigure().minCallTimeOffset) {
             return crs
         }
         val tmp: List<CallRecord> = crs.filter { cr ->
-            precisionFilter(sr, cr, precisionCount)
+            precisionFilter(sr, cr, precisionCount, maxOffset)
         }
         if(tmp.size > 1) {
-            return precisionFilter(sr, tmp, precisionCount.inc())
+            return precisionFilter(sr, tmp, precisionCount.inc(), maxOffset)
         }
         return tmp
     }
@@ -298,9 +306,9 @@ class SyncCallService : SafeJobIntentService() {
     /**
      * 精确过滤
      */
-    private fun precisionFilter(sr: SystemCallRecord, cr: CallRecord, precisionCount: Int): Boolean {
+    private fun precisionFilter(sr: SystemCallRecord, cr: CallRecord, precisionCount: Int, maxOffset: Long): Boolean {
         //重新计算时间偏移量
-        val timeOffset = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset - (TelephonyCenter.get().getRecordConfigure().minCallTimeOffset * precisionCount)
+        val timeOffset = maxOffset - (TelephonyCenter.get().getRecordConfigure().minCallTimeOffset * precisionCount)
         val crStartTime = max(cr.callStartTime, cr.callOffHookTime)
         if(crStartTime > 0 && cr.callEndTime <= 0) { // 未能监听到结束时间的意外情况
             if(sr.duration > 0) {
@@ -466,9 +474,10 @@ class SyncCallService : SafeJobIntentService() {
                     }
                     //                    TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $recordCall")
                     //                    syncRecordBySys(recordCall, systemRecords[0])
+                    val maxOffset = reloadMaxOffset(systemRecords.first(), recordCall)
                     systemRecords.forEach sys@{ sr ->
                         if(coarseFilter(sr, recordCall)) {
-                            val targetRecords = precisionFilter(sr, arrayListOf(recordCall))
+                            val targetRecords = precisionFilter(sr, arrayListOf(recordCall), 0, maxOffset)
                             when {
                                 targetRecords.size == 1 -> {
                                     val target = targetRecords[0]
