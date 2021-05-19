@@ -65,6 +65,12 @@ class RecordCallService : Service() {
         override fun registerRecordCallback(recordCallback: IRecordCallback) {
             mRecordCallback = recordCallback
         }
+    
+        override fun unRegisterRecordCallback(recordCallback: IRecordCallback) {
+            if(null != mRecordCallback && mRecordCallback == recordCallback){
+                mRecordCallback = null
+            }
+        }
     }
     
     private val mStateListener = object : PhoneStateListener() {
@@ -74,16 +80,16 @@ class RecordCallService : Service() {
         }
     }
     
-    private val mForegroundEvent = object : IAppForegroundEvent {
-        override fun onForegroundStateChange(isForeground: Boolean) {
-            TelephonyCenter.get().libW("onForegroundStateChange: $isForeground")
-            if(isForeground) {
-                unKeepAlive()
-            } else {
-                keepAlive()
-            }
-        }
-    }
+    // private val mForegroundEvent = object : IAppForegroundEvent {
+    //     override fun onForegroundStateChange(isForeground: Boolean) {
+    //         TelephonyCenter.get().libW("onForegroundStateChange: $isForeground")
+    //         if(isForeground) {
+    //             unKeepAlive()
+    //         } else {
+    //             keepAlive()
+    //         }
+    //     }
+    // }
 
 //    private val mCallStateReceiver = object : BroadcastReceiver() {
 //        override fun onReceive(context: Context?, intent: Intent?) {
@@ -123,6 +129,7 @@ class RecordCallService : Service() {
                                 applicationContext, mLastRecordId
                             )
                             mRecordCallback?.onCallEnd(lastRecord.recordId)
+                            mRecordCallback = null
                         }
                     }
                     MediaRecordHelper.get(application).stopRecord()
@@ -219,7 +226,7 @@ class RecordCallService : Service() {
     
     private fun internalStartListen() {
         TelephonyCenter.get().libW("internalStartListen")
-        TelephonyCenter.get().registerActivityLifecycleCallbacks(mForegroundEvent)
+        // TelephonyCenter.get().registerActivityLifecycleCallbacks(mForegroundEvent)
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_CALL_STATE)
     }
@@ -228,8 +235,8 @@ class RecordCallService : Service() {
         TelephonyCenter.get().libW("internalStopListen")
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_NONE)
-        TelephonyCenter.get().unRegisterActivityLifecycleCallbacks(mForegroundEvent)
-        unKeepAlive()
+        // TelephonyCenter.get().unRegisterActivityLifecycleCallbacks(mForegroundEvent)
+        // unKeepAlive()
     }
     
     override fun onCreate() {

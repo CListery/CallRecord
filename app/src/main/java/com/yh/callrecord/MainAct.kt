@@ -116,7 +116,7 @@ class MainAct : Activity(),
         }
         findViewById<View>(R.id.mCallBtn)?.setOnClickListener {
             TelephonyCenter.get()
-                .call(this, "10010", mRecordService)
+                .call(this, "10010", mRecordService, mRecordCallback)
         }
         findViewById<View>(R.id.mGetMCCMNC)?.setOnClickListener {
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator().operatorName}")
@@ -178,7 +178,6 @@ class MainAct : Activity(),
             if(null != mLastRecordId) {
                 mRecordService?.resumeLastRecord(mLastRecordId!!)
             }
-            mRecordService?.registerRecordCallback(mRecordCallback)
         }
     }
     

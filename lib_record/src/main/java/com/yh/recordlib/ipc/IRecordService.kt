@@ -17,4 +17,8 @@ interface IRecordService {
         @In
         recordCallback: IRecordCallback
     )
+    fun unRegisterRecordCallback(
+        @In
+        recordCallback: IRecordCallback
+    )
 }

@@ -26,6 +26,7 @@ import com.yh.appinject.logger.ext.libE
 import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.cons.TelephonyProperties
 import com.yh.recordlib.inject.IRecordAppInject
+import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.lang.InvalidSubscriberIdException
 
@@ -576,7 +577,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
         return result
     }
 
-    fun call(context: Context, callNumber: String?, iRecordService: IRecordService?) {
+    fun call(context: Context, callNumber: String?, iRecordService: IRecordService?, iRecordCallback: IRecordCallback?) {
         if (null == callNumber || null == iRecordService) {
             libW("call fail!")
             return
@@ -588,6 +589,9 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
         ) {
             showTipMsg("请打开拨打电话的权限")
             return
+        }
+        if(null != iRecordCallback) {
+            iRecordService.registerRecordCallback(iRecordCallback)
         }
         iRecordService.startListen(callNumber)
         val intent = Intent(Intent.ACTION_CALL)
