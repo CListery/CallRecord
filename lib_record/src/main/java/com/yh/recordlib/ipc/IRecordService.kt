@@ -9,7 +9,7 @@ import com.codezjx.andlinker.annotation.RemoteInterface
 @RemoteInterface
 interface IRecordService {
     
-    fun startListen(callNumber: String?)
+    fun startListen(callNumber: String)
     fun stopListen()
     
     fun resumeLastRecord(recordId: String)

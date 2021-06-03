@@ -42,9 +42,9 @@ class MainAct : Activity(),
     private var mLastRecordId: String? = null
     
     private val mRecordCallback: IRecordCallback = object : IRecordCallback {
-        override fun onRecordIdCreated(recordId: String) {
-            logD("onRecordIdCreated: $recordId")
-            mLastRecordId = recordId
+        override fun onRecordIdCreated(callRecord: CallRecord) {
+            logD("onRecordIdCreated: $callRecord")
+            mLastRecordId = callRecord.recordId
         }
     
         override fun onCallIn(recordId: String) {

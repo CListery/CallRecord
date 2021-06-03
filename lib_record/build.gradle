@@ -5,6 +5,10 @@ apply plugin: 'kotlin-kapt'
 apply plugin: 'realm-android'
 
 android {
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    useLibrary 'android.test.mock'
+
     compileSdkVersion buildVersionInt
     buildToolsVersion buildVersionName
 
@@ -21,11 +25,12 @@ android {
         versionCode VERSION_CODE
         versionName VERSION_NAME
 
-        buildConfigField('long', 'RECORD_DB_VERSION', '2')
+        buildConfigField('long', 'RECORD_DB_VERSION', '3')
         buildConfigField('String', 'CALL_RECORD_DB', '"call_record.realm"')
         buildConfigField('long', 'CALL_RECORD_RETRY_TIME', '5000')
         buildConfigField('long', 'MAX_CALL_TIME_OFFSET', '60000')
         buildConfigField('long', 'MIN_CALL_TIME_OFFSET', '100')
+        buildConfigField('long', 'START_CALL_TIME_OFFSET', '100')
     }
 
     buildTypes {

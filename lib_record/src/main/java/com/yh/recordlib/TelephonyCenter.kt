@@ -594,7 +594,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             iRecordService.registerRecordCallback(iRecordCallback)
         }
         iRecordService.startListen(callNumber)
-        val intent = Intent(Intent.ACTION_CALL)
+        val intent = Intent(Intent.ACTION_DIAL)
         intent.data = Uri.parse("tel:$callNumber")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)

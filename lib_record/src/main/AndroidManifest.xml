@@ -9,7 +9,7 @@
     <!--<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>-->
     <uses-permission android:name="android.permission.READ_CALL_LOG"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <!--<uses-permission android:name="android.permission.CALL_PHONE"/>-->
     <!--<uses-permission android:name="android.permission.READ_SMS"/>-->
     <!--<uses-permission android:name="android.permission.READ_PHONE_NUMBERS"/>-->
     
@@ -17,10 +17,6 @@
         <service
             android:name="com.yh.recordlib.service.RecordCallService"
             android:exported="false" />
-        <service
-            android:name="com.yh.recordlib.service.JobRecordCallService"
-            android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
         <service
             android:name="com.yh.recordlib.service.SyncCallService"
             android:exported="true"

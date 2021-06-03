@@ -50,7 +50,7 @@ class RecordSyncNotifier private constructor() {
     }
     
     @Synchronized
-    fun notifyRecordSyncStatus(callRecords: ArrayList<CallRecord>) {
+    fun notifyRecordSyncStatus(callRecords: List<CallRecord>) {
         mHandler.post {
             ArrayList(mSyncCallbacks).forEach { event ->
                 if(callRecords.isNotEmpty()) {

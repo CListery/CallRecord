@@ -28,7 +28,7 @@ class ManualSyncLogFormatStrategy(builder: Builder) : FormatStrategy {
     private val logStrategy: LogStrategy = builder.logStrategy
     private var logFile: File = builder.logFile!!
     
-    fun getRealLogFile(): File? = logFile
+    fun getRealLogFile(): File = logFile
     
     override fun log(priority: Int, onceOnlyTag: String?, message: String) {
         date.time = System.currentTimeMillis()

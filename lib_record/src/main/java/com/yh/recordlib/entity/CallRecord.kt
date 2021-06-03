@@ -6,6 +6,7 @@ import io.realm.RealmObject
 import io.realm.annotations.PrimaryKey
 import io.realm.annotations.RealmClass
 import io.realm.annotations.Required
+import org.jetbrains.annotations.TestOnly
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.min
@@ -14,14 +15,25 @@ import kotlin.math.min
  * Created by CYH on 2019-05-30 10:57
  */
 @RealmClass
-open class CallRecord : RealmObject() {
+open class CallRecord : RealmObject {
 
     @PrimaryKey
     @Required
     var recordId: String = ""
-
+    
+    /**
+     * 实际拨打的号码
+     */
     @Required
     var phoneNumber: String = ""
+    
+    /**
+     * 记录发起呼出请求的号码
+     *
+     * 可与[phoneNumber]比较是否在跳转到拨号工具后被修改过
+     */
+    @Required
+    var originCallNumber: String = ""
 
     var callStartTime: Long = 0L
     var callOffHookTime: Long = 0L
@@ -53,6 +65,8 @@ open class CallRecord : RealmObject() {
     }
 
     var callType: Int = CallType.Unknown.ordinal
+    
+    val realCallType: CallType get() = CallType.typeOf(callType)
 
     var audioFilePath: String? = ""
 
@@ -69,7 +83,7 @@ open class CallRecord : RealmObject() {
     /**
      * 系统数据库中该通话记录的id
      */
-    open var callLogId: Long = 0L
+    var callLogId: Long = 0L
 
     /**
      * 系统数据库中该通话记录的持续时长
@@ -126,7 +140,56 @@ open class CallRecord : RealmObject() {
      * 拨打时是否有电信卡
      */
     var hasChinaTELECOM: Boolean = false
-
+    
+    constructor():super()
+    
+    @TestOnly
+    constructor(
+        recordId: String,
+        phoneNumber: String,
+        originCallNumber: String = phoneNumber,
+        callStartTime: Long,
+        callOffHookTime: Long,
+        callEndTime: Long,
+        callType: Int,
+        audioFilePath: String? = null,
+        isFake: Boolean,
+        synced: Boolean,
+        callLogId: Long,
+        duration: Long,
+        needRecalculated: Boolean = false,
+        recalculated: Boolean,
+        callState: Int,
+        phoneAccountId: Int? = -1,
+        mccMnc: String? = "",
+        isNoMapping: Boolean,
+        isDeleted: Boolean,
+        isManualSynced: Boolean = false,
+        hasChinaTELECOM: Boolean = false
+    ) : super() {
+        this.recordId = recordId
+        this.phoneNumber = phoneNumber
+        this.originCallNumber = originCallNumber
+        this.callStartTime = callStartTime
+        this.callOffHookTime = callOffHookTime
+        this.callEndTime = callEndTime
+        this.callType = callType
+        this.audioFilePath = audioFilePath
+        this.isFake = isFake
+        this.synced = synced
+        this.callLogId = callLogId
+        this.duration = duration
+        this.needRecalculated = needRecalculated
+        this.recalculated = recalculated
+        this.callState = callState
+        this.phoneAccountId = phoneAccountId
+        this.mccMnc = mccMnc
+        this.isNoMapping = isNoMapping
+        this.isDeleted = isDeleted
+        this.isManualSynced = isManualSynced
+        this.hasChinaTELECOM = hasChinaTELECOM
+    }
+    
     fun recalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")
         if (!synced) {
@@ -230,8 +293,8 @@ open class CallRecord : RealmObject() {
     fun getFormatDate(): String {
         return SimpleDateFormat("yyyy.M.d HH:mm", Locale.CHINESE).format(callStartTime)
     }
-
+    
     override fun toString(): String {
-        return "CallRecord(recordId='$recordId', phoneNumber='$phoneNumber', callStartTime=$callStartTime, callOffHookTime=$callOffHookTime, callEndTime=$callEndTime, callType=$callType, audioFilePath=$audioFilePath, isFake=$isFake, synced=$synced, callLogId=$callLogId, duration=$duration, recalculated=$recalculated, callState=$callState, phoneAccountId=$phoneAccountId, mccMnc=$mccMnc, isNoMapping=$isNoMapping, isDeleted=$isDeleted)"
+        return "CallRecord(recordId='$recordId', phoneNumber='$phoneNumber', originCallNumber='$originCallNumber', callStartTime=$callStartTime, callOffHookTime=$callOffHookTime, callEndTime=$callEndTime, callType=$callType, audioFilePath=$audioFilePath, isFake=$isFake, synced=$synced, callLogId=$callLogId, duration=$duration, needRecalculated=$needRecalculated, recalculated=$recalculated, callState=$callState, phoneAccountId=$phoneAccountId, mccMnc=$mccMnc, isNoMapping=$isNoMapping, isDeleted=$isDeleted, isManualSynced=$isManualSynced, hasChinaTELECOM=$hasChinaTELECOM)"
     }
 }

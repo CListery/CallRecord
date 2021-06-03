@@ -50,7 +50,6 @@ fun Cursor.parseSystemRecord(
                 return@forEach
             }
         }
-        lastModify = get(columnIndexLastModified, -1L)
     }
 }
 
@@ -81,6 +80,9 @@ fun Cursor?.parseSystemCallRecords(
             var index = result.getColumnIndex("sub_id")
             if(-1 == index) {
                 index = result.getColumnIndex("simid")
+            }
+            if(-1 == index) {
+                index = result.getColumnIndex("subscription_id")
             }
             index
         }

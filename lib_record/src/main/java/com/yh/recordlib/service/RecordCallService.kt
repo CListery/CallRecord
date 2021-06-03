@@ -6,17 +6,14 @@ import android.content.Intent
 import android.os.IBinder
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
-import android.text.TextUtils
 import com.codezjx.andlinker.AndLinkerBinder
 import com.vicpin.krealmextensions.save
-import com.yh.appinject.lifecycle.IAppForegroundEvent
 import com.yh.appinject.logger.ext.libD
 import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.entity.FakeCallRecord
-import com.yh.recordlib.ext.deleteRecordById
 import com.yh.recordlib.ext.findRecordById
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
@@ -45,11 +42,11 @@ class RecordCallService : Service() {
             }
         }
         
-        override fun startListen(callNumber: String?) {
+        override fun startListen(callNumber: String) {
             TelephonyCenter.get().libW("startListen")
             if(TelephonyManager.CALL_STATE_IDLE == mCurrentState) {
-                if(null == mLastRecordId && !TextUtils.isEmpty(callNumber)) {
-                    makeRecord(callNumber, CallType.CallOut)
+                if(mLastRecordId.isNullOrEmpty()) {
+                    makeRecord(callNumber, CallType.CallOut, saveOriginNumber = true)
                 }
                 internalStartListen()
             }
@@ -80,33 +77,6 @@ class RecordCallService : Service() {
         }
     }
     
-    // private val mForegroundEvent = object : IAppForegroundEvent {
-    //     override fun onForegroundStateChange(isForeground: Boolean) {
-    //         TelephonyCenter.get().libW("onForegroundStateChange: $isForeground")
-    //         if(isForeground) {
-    //             unKeepAlive()
-    //         } else {
-    //             keepAlive()
-    //         }
-    //     }
-    // }
-
-//    private val mCallStateReceiver = object : BroadcastReceiver() {
-//        override fun onReceive(context: Context?, intent: Intent?) {
-//            TelephonyCenter.get().libD("onReceive: ${intent?.action} -> ${System.currentTimeMillis()}")
-//            TelephonyCenter.get().libD(
-//                "onReceive: TelephonyManager.EXTRA_STATE -> ${intent?.getStringExtra(
-//                    TelephonyManager.EXTRA_STATE
-//                )}"
-//            )
-//            TelephonyCenter.get().libD(
-//                "onReceive: TelephonyManager.EXTRA_INCOMING_NUMBER -> ${intent?.getStringExtra(
-//                    TelephonyManager.EXTRA_INCOMING_NUMBER
-//                )}"
-//            )
-//        }
-//    }
-    
     /**
      * outgoing : CALL_STATE_OFFHOOK -> CALL_STATE_IDLE
      *
@@ -125,9 +95,7 @@ class RecordCallService : Service() {
                         if(null != lastRecord) {
                             lastRecord.callEndTime = System.currentTimeMillis()
                             lastRecord.save()
-                            SyncCallService.enqueueWork(
-                                applicationContext, mLastRecordId
-                            )
+                            SyncCallService.enqueueWork(applicationContext, mLastRecordId)
                             mRecordCallback?.onCallEnd(lastRecord.recordId)
                             mRecordCallback = null
                         }
@@ -152,21 +120,19 @@ class RecordCallService : Service() {
                 if(TelephonyManager.CALL_STATE_IDLE == mCurrentState) {
                     //呼出开始
                     mCurrentState = state
-                    val callRecord: CallRecord
-                    callRecord = if(null != mLastRecordId) {
+                    val callRecord = if(!mLastRecordId.isNullOrEmpty()) {
                         val targetRecord = findRecordById(mLastRecordId!!)
-                        if(null != targetRecord && (TextUtils.isEmpty(phoneNumber) || TextUtils.equals(phoneNumber, targetRecord.phoneNumber))) {
+                        if(null == targetRecord) {
+                            makeRecord(phoneNumber, CallType.CallOut, saveOriginNumber = true)
+                        } else if(phoneNumber.isNullOrEmpty() || phoneNumber == targetRecord.phoneNumber) {
                             // 如果系统未返回拨号号码，则以呼出时号码为准
                             targetRecord
                         } else {
-                            // 号码不相同，删除呼出时创建的记录
-                            if(null != targetRecord) {
-                                deleteRecordById(targetRecord.recordId)
-                            }
-                            makeRecord(phoneNumber, CallType.CallOut)
+                            // 号码不相同，更新记录
+                            makeRecord(phoneNumber, CallType.CallOut, targetRecord.recordId)
                         }
                     } else {
-                        makeRecord(phoneNumber, CallType.CallOut)
+                        makeRecord(phoneNumber, CallType.CallOut, saveOriginNumber = true)
                     }
                     callRecord.callOffHookTime = System.currentTimeMillis()
                     callRecord.save()
@@ -192,11 +158,17 @@ class RecordCallService : Service() {
     }
     
     @Synchronized
-    private fun makeRecord(phoneNumber: String?, callType: CallType): CallRecord {
-        val recordId: String = createRecordId()
+    private fun makeRecord(
+        phoneNumber: String?,
+        callType: CallType,
+        oldRecordId: String? = null,
+        saveOriginNumber: Boolean = false
+    ): CallRecord {
+        val recordId: String = oldRecordId
+            ?: createRecordId()
         var recordPhoneNumber: String? = phoneNumber
         var fake = false
-        if(null == recordPhoneNumber || TextUtils.isEmpty(recordPhoneNumber)) {
+        if(recordPhoneNumber.isNullOrEmpty()) {
             fake = true
             recordPhoneNumber = createFakePhoneNumber()
             TelephonyCenter.get().libW("Fake phone number: $recordPhoneNumber")
@@ -205,16 +177,24 @@ class RecordCallService : Service() {
             fakeRecord.fakeNumber = recordPhoneNumber
             fakeRecord.save()
         }
+        var oldRecord: CallRecord? = null
+        if(!oldRecordId.isNullOrEmpty()) {
+            oldRecord = findRecordById(oldRecordId)
+        }
         val record = CallRecord()
         record.recordId = recordId
         record.isFake = fake
         record.callType = callType.ordinal
-        record.callStartTime = System.currentTimeMillis()
+        record.callStartTime = oldRecord?.callStartTime ?: System.currentTimeMillis()
         record.phoneNumber = recordPhoneNumber
         record.hasChinaTELECOM = TelephonyCenter.get().hasTelecomCard()
+        if(saveOriginNumber){
+            record.originCallNumber = phoneNumber
+                ?: ""
+        }
         record.save()
         mLastRecordId = recordId
-        mRecordCallback?.onRecordIdCreated(recordId)
+        mRecordCallback?.onRecordIdCreated(record)
         return record
     }
     
@@ -226,7 +206,6 @@ class RecordCallService : Service() {
     
     private fun internalStartListen() {
         TelephonyCenter.get().libW("internalStartListen")
-        // TelephonyCenter.get().registerActivityLifecycleCallbacks(mForegroundEvent)
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_CALL_STATE)
     }
@@ -235,8 +214,6 @@ class RecordCallService : Service() {
         TelephonyCenter.get().libW("internalStopListen")
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_NONE)
-        // TelephonyCenter.get().unRegisterActivityLifecycleCallbacks(mForegroundEvent)
-        // unKeepAlive()
     }
     
     override fun onCreate() {
@@ -244,13 +221,6 @@ class RecordCallService : Service() {
         
         mLinkerBinder = AndLinkerBinder.Factory.newBinder()
         mLinkerBinder?.registerObject(mRecordService)
-
-//        val receiverFilter = IntentFilter()
-//        receiverFilter.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
-//        receiverFilter.addAction(Intent.ACTION_NEW_OUTGOING_CALL)
-//        receiverFilter.addAction(Intent.ACTION_CALL_BUTTON)
-//        receiverFilter.addAction(Intent.ACTION_CALL)
-//        registerReceiver(mCallStateReceiver, receiverFilter)
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -262,15 +232,7 @@ class RecordCallService : Service() {
     override fun onDestroy() {
         internalStopListen()
         mLinkerBinder?.unRegisterObject(mRecordService)
-//        unregisterReceiver(mCallStateReceiver)
         super.onDestroy()
     }
     
-    private fun keepAlive() {
-        startForeground(TelephonyCenter.GRAY_SERVICE_ID, TelephonyCenter.get().getNotification())
-    }
-    
-    private fun unKeepAlive() {
-        stopForeground(true)
-    }
 }
