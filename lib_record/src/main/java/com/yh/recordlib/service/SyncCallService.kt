@@ -548,9 +548,7 @@ class SyncCallService : SafeJobIntentService() {
             callRecord.duration = systemCallRecord.duration
             callRecord.callState = systemCallRecord.type
             callRecord.phoneAccountId = systemCallRecord.phoneAccountId
-            if(callRecord.callEndTime < callRecord.callStartTime) {
-                callRecord.callEndTime = 0L
-            }
+            callRecord.recalculateEndTime()
             if(callRecord.isFake && systemCallRecord.phoneNumber.isNotEmpty()) {
                 delete<FakeCallRecord> { equalTo("recordId", callRecord.recordId) }
                 callRecord.isFake = false

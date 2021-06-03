@@ -582,14 +582,10 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             libW("call fail!")
             return
         }
-        if (PermissionChecker.PERMISSION_GRANTED != PermissionChecker.checkSelfPermission(
-                context,
-                Manifest.permission.CALL_PHONE
-            )
-        ) {
-            showTipMsg("请打开拨打电话的权限")
-            return
-        }
+        // if (PermissionChecker.PERMISSION_GRANTED != PermissionChecker.checkSelfPermission(context, Manifest.permission.CALL_PHONE)) {
+        //     showTipMsg("请打开拨打电话的权限")
+        //     return
+        // }
         if(null != iRecordCallback) {
             iRecordService.registerRecordCallback(iRecordCallback)
         }

@@ -190,6 +190,18 @@ open class CallRecord : RealmObject {
         this.hasChinaTELECOM = hasChinaTELECOM
     }
     
+    fun recalculateEndTime() {
+        if(callEndTime <= 0) {
+            //App 被系统回收，没有获取到结束时间
+            val durationMillis = getDurationMillis()
+            callEndTime = if(callOffHookTime > 0) {
+                callOffHookTime + durationMillis
+            } else {
+                callStartTime + durationMillis
+            }
+        }
+    }
+    
     fun recalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")
         if (!synced) {
@@ -214,23 +226,12 @@ open class CallRecord : RealmObject {
     /**
      * 大于 80 秒则认定为接通就不需要再计算
      */
-    private fun internalRecalculateDuration(
-        originStartTime: Long,
-        systemCallRecord: SystemCallRecord
-    ) {
+    private fun internalRecalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("d:$duration - e:$callEndTime - ss:${systemCallRecord.date} - os:$originStartTime")
 
         if (duration in 1..91) {
             // 经测试最长的假通话时长可达到90秒
             needRecalculated = true
-            if(callEndTime <= 0) {
-                //App 被系统回收，没有获取到结束时间，并且没获取到有效的 lastModify
-                callEndTime = if(callOffHookTime > 0) {
-                    callOffHookTime + getDurationMillis()
-                } else {
-                    callStartTime + getDurationMillis()
-                }
-            }
 
             if (systemCallRecord.date - originStartTime > 10000) {
                 // 系统通话记录开始时间大于本地通话记录开始时间
@@ -242,9 +243,7 @@ open class CallRecord : RealmObject {
                 return
             }
 
-            val tmpDuration = min(
-                callEndTime - callOffHookTime, callEndTime - callStartTime
-            ).div(1000)
+            val tmpDuration = min(callEndTime - callOffHookTime, callEndTime - callStartTime).div(1000)
             TelephonyCenter.get().libW("t:$tmpDuration")
             if (duration == tmpDuration) {
                 //一开始拨打就接通的情况是电信卡在安卓机上的 bug
