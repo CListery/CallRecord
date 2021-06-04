@@ -75,6 +75,12 @@ class DefCallRecordDBMigration(private val realmMigration: RealmMigration?) : Re
             schema.get("SystemCallRecord")?.removeField("lastModify")
             oldMainVersion++
         }
+        if(3L == oldMainVersion){
+            schema.remove("FakeCallRecord")
+            schema.get("CallRecord")?.removeField("originCallNumber")
+            schema.get("CallRecord")?.removeField("isFake")
+            oldMainVersion++
+        }
         if(oldVersions.second < newVersions.second) {
             realmMigration?.migrate(realm, oldVersions.second, newVersions.second)
         }

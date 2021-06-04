@@ -133,7 +133,7 @@ class MainAct : Activity(),
         findViewById<View>(R.id.mGetLastRecord)?.setOnClickListener {
             queryLastRecord()?.apply {
                 findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
-                findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber\nFake: $isFake"
+                findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber"
                 findViewById<TextView>(R.id.mDurationTxt).text = "Duration: $duration"
                 findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${getFormatDate()}"
                 findViewById<TextView>(R.id.mSyncTxt).text = "Synced: $synced"
@@ -159,10 +159,10 @@ class MainAct : Activity(),
         }
     }
     
-    override fun onSaveInstanceState(outState: Bundle?) {
+    override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         if(null != mLastRecordId) {
-            outState?.putString(Constants.EXTRA_LAST_RECORD_ID, mLastRecordId)
+            outState.putString(Constants.EXTRA_LAST_RECORD_ID, mLastRecordId)
         }
     }
     

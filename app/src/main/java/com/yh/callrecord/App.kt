@@ -8,6 +8,7 @@ import android.os.Handler
 import android.provider.CallLog
 import android.text.TextUtils
 import android.util.Log
+import android.widget.Toast
 import com.yh.appinject.logger.LogsManager
 import com.yh.appinject.logger.logD
 import com.yh.appinject.logger.logW
@@ -149,8 +150,8 @@ class App : Application(), IRecordAppInject {
         return this
     }
 
-    override fun showTipMsg(errorMsg: String) {
-
+    override fun showTipMsg(msg: String) {
+        Toast.makeText(mApplicationCtx, msg, Toast.LENGTH_SHORT).show()
     }
 
     override fun getNotificationIcon(): Int {

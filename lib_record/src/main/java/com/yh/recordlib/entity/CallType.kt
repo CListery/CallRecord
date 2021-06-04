@@ -13,7 +13,7 @@ enum class CallType {
         
         @JvmStatic
         fun typeOf(ordinal: Int): CallType {
-            return values().getOrElse(ordinal) { Unknown }
+            return values().find { it.ordinal == ordinal } ?: Unknown
         }
     }
 }

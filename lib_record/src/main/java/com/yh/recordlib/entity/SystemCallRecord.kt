@@ -18,7 +18,6 @@ open class SystemCallRecord : RealmObject, Comparable<SystemCallRecord> {
     constructor(
         callId: Long,
         date: Long,
-        lastModify: Long,
         duration: Long,
         type: Int,
         phoneAccountId: Int,
