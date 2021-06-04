@@ -588,10 +588,6 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             showTipMsg("请打开拨打电话的权限")
             return
         }
-        if(isMIUI){
-            showTipMsg("小米手机无法拨打请进入系统设置手动开启拨打电话权限")
-            return
-        }
         if(null != iRecordCallback) {
             iRecordService.registerRecordCallback(iRecordCallback)
         }
@@ -600,6 +596,9 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
         intent.data = Uri.parse("tel:$callNumber")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
+        if(isMIUI){
+            showTipMsg("如小米手机无法拨打请进入系统设置手动开启拨打电话权限")
+        }
     }
     
     fun listenCall(callNumber: String?, iRecordService: IRecordService?, iRecordCallback: IRecordCallback?){
