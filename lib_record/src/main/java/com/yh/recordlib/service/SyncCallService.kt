@@ -432,9 +432,9 @@ class SyncCallService : SafeJobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
+            printCursor(systemRecords, true)
+            printLog(Log.DEBUG, "----------------------------------------")
             systemRecords.parseSystemCallRecords({
-                printCursor(systemRecords, true)
-                printLog(Log.DEBUG, "----------------------------------------")
                 printLog(Log.INFO, it.mapIndexed { index, systemCallRecord -> "| $index $systemCallRecord" }.joinToString("\n"))
             }, {
                 printCursor(systemRecords)
