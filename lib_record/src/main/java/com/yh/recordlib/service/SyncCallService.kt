@@ -12,8 +12,8 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.core.app.SafeJobIntentService
 import androidx.core.content.PermissionChecker
-import com.vicpin.krealmextensions.delete
-import com.vicpin.krealmextensions.save
+import com.yh.krealmextensions.delete
+import com.yh.krealmextensions.save
 import com.yh.appinject.logger.LibLogs
 import com.yh.appinject.logger.ext.libCursor
 import com.yh.appinject.logger.ext.libD
@@ -94,7 +94,7 @@ class SyncCallService : SafeJobIntentService() {
             printLog(Log.ERROR, "No permission operator call_log!")
             return
         }
-        if(null == recordId || TextUtils.isEmpty(recordId)) {
+        if(recordId.isNullOrEmpty()) {
             syncAllRecord(work)
         } else {
             syncTargetRecord(work, recordId)
@@ -134,7 +134,7 @@ class SyncCallService : SafeJobIntentService() {
         // 如异常通话记录的通话开始时间大于所有正常通话记录的结束时间，则以最后一条异常记录的开始时间+30分钟作为最后一条通话记录的结束时间
         val allExceptionRecord = allUnSyncRecords.filter { it.callEndTime <= 0 }
         if(allExceptionRecord.isNotEmpty()) {
-            val lastStartRecord = allExceptionRecord.maxBy { it.callStartTime }
+            val lastStartRecord = allExceptionRecord.maxByOrNull { it.callStartTime }
             if(null != lastStartRecord) {
                 if(lastStartRecord.callStartTime > lastCallEndTime){
                     lastCallEndTime = lastStartRecord.callStartTime + 1800000
@@ -723,12 +723,7 @@ class SyncCallService : SafeJobIntentService() {
         callRecord.duration = systemCallRecord.duration
         callRecord.callState = systemCallRecord.type
         callRecord.phoneAccountId = systemCallRecord.phoneAccountId
-        if(callRecord.callEndTime <= 0) {
-            callRecord.callEndTime = systemCallRecord.lastModify
-            if(callRecord.callEndTime < callRecord.callStartTime) {
-                callRecord.callEndTime = -1
-            }
-        }
+        callRecord.recalculateEndTime(systemCallRecord)
         if(callRecord.isFake && systemCallRecord.phoneNumber.isNotEmpty()) {
             delete<FakeCallRecord> { equalTo("recordId", callRecord.recordId) }
             callRecord.isFake = false

@@ -6,7 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
-import com.vicpin.krealmextensions.save
+import com.yh.krealmextensions.save
 import com.yh.appinject.logger.ext.libD
 import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.logD
@@ -159,10 +159,10 @@ class MainAct : Activity(),
         }
     }
     
-    override fun onSaveInstanceState(outState: Bundle?) {
+    override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         if(null != mLastRecordId) {
-            outState?.putString(Constants.EXTRA_LAST_RECORD_ID, mLastRecordId)
+            outState.putString(Constants.EXTRA_LAST_RECORD_ID, mLastRecordId)
         }
     }
     

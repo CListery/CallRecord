@@ -126,7 +126,25 @@ open class CallRecord : RealmObject() {
      * 拨打时是否有电信卡
      */
     var hasChinaTELECOM: Boolean = false
-
+    
+    fun recalculateEndTime(systemCallRecord: SystemCallRecord) {
+        if(callEndTime <= 0) {
+            //App 被系统回收，没有获取到结束时间
+            val lastModify = systemCallRecord.lastModify
+            val durationMillis = getDurationMillis()
+            callEndTime = if(lastModify < callStartTime || lastModify - callStartTime > durationMillis + 500) {
+                //没获取到有效的 lastModify
+                if(callOffHookTime > 0) {
+                    callOffHookTime + durationMillis
+                } else {
+                    callStartTime + durationMillis
+                }
+            } else {
+                lastModify
+            }
+        }
+    }
+    
     fun recalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")
         if (!synced) {
@@ -160,14 +178,6 @@ open class CallRecord : RealmObject() {
         if (duration in 1..91) {
             // 经测试最长的假通话时长可达到90秒
             needRecalculated = true
-            if(callEndTime <= 0) {
-                //App 被系统回收，没有获取到结束时间，并且没获取到有效的 lastModify
-                callEndTime = if(callOffHookTime > 0) {
-                    callOffHookTime + getDurationMillis()
-                } else {
-                    callStartTime + getDurationMillis()
-                }
-            }
 
             if (systemCallRecord.date - originStartTime > 10000) {
                 // 系统通话记录开始时间大于本地通话记录开始时间

@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import com.yh.appinject.logger.ext.libE
 import com.yh.appinject.logger.ext.libW
+import com.yh.krealmextensions.RealmConfigManager
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.db.DefCallRecordDBMigration
 import com.yh.recordlib.entity.CallRecord
@@ -36,6 +37,7 @@ class CallRecordController private constructor(
 ) {
     
     companion object {
+        
         @JvmStatic
         private var mInstances: CallRecordController? = null
         
@@ -89,6 +91,9 @@ class CallRecordController private constructor(
         mHandler = Handler(mHandlerThread.looper)
         
         Realm.init(application)
+        
+        RealmConfigManager.isEnableUiThreadOption = true
+        
         TelephonyCenter.get().libW("init done!")
     }
     
@@ -98,19 +103,12 @@ class CallRecordController private constructor(
         builder.directory(File(dbFileDirName))
         builder.name(BuildConfig.CALL_RECORD_DB)
         builder.schemaVersion(DefCallRecordDBMigration.getFinalVersion(dbVersion))
-        
-        val defaultModule = Realm.getDefaultModule()
-        if(null != defaultModule) {
-            builder.modules(defaultModule)
-        }
-        builder.addModule(RecordRealmModule())
-        modules?.filterNotNull()?.forEach { module ->
-            builder.addModule(module)
-        }
-        
         builder.migration(DefCallRecordDBMigration(migration))
         
-        Realm.setDefaultConfiguration(builder.build())
+        RealmConfigManager.initModule(RecordRealmModule::class.java, builder)
+        modules?.filterNotNull()?.forEach { module ->
+            RealmConfigManager.initModule(module::class.java, builder)
+        }
         
         if(needInitSync) {
             mHandler.postDelayed({ SyncCallService.enqueueWork(application) }, 2000)

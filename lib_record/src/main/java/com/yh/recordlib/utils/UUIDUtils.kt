@@ -22,7 +22,7 @@ fun makeRandomUUID(needSplit: Boolean = false): String {
     val time = System.currentTimeMillis()
     val name = ByteArray(255)
     for(i in 0 until 255) {
-        name[i] = ((i * Math.random() * time) % 255).toByte()
+        name[i] = ((i * Math.random() * time) % 255).toInt().toByte()
     }
     val md5Bytes = md.digest(name)
     md5Bytes[6] = md5Bytes[6] and 0x0f.toByte()  /* clear version        */
@@ -34,7 +34,7 @@ fun makeRandomUUID(needSplit: Boolean = false): String {
         error("data must be 16 bytes in length")
     }
     
-    for(i in 0..15) md5Bytes[i] = md5Bytes[i] and (Math.random() * 255).toByte()
+    for(i in 0..15) md5Bytes[i] = md5Bytes[i] and (Math.random() * 255).toInt().toByte()
     
     var msb: Long = 0
     var lsb: Long = 0

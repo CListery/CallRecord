@@ -12,8 +12,8 @@ import com.yh.appinject.logger.LogsManager
 import com.yh.appinject.logger.logD
 import com.yh.appinject.logger.logW
 import com.yh.callrecord.db.CallRecordDBMigration
+import com.yh.krealmextensions.RealmConfigManager
 import com.yh.recordlib.CallRecordController
-import com.yh.recordlib.CallRecordController.Companion.initialization
 import com.yh.recordlib.RecordConfigure
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.inject.IRecordAppInject
@@ -59,6 +59,8 @@ class App : Application(), IRecordAppInject {
 
         LogsManager.get().setDefLoggerConfig(appConfig = true to Log.VERBOSE)
         
+        RealmConfigManager.isEnableUiThreadOption = true
+        
         TelephonyCenter.get().register(this)
         TelephonyCenter.get().loggerConfig(true to Log.VERBOSE)
         val dbFileDirName =
@@ -70,7 +72,7 @@ class App : Application(), IRecordAppInject {
                 filesDir.absolutePath.toString() + File.separator + "center"
             )
             TelephonyCenter.get().setupRecordConfigure(recordConfigure)
-            initialization(recordConfigure)
+            CallRecordController.initialization(recordConfigure)
         }
 
         contentResolver.registerContentObserver(//
