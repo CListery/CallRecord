@@ -7,5 +7,13 @@ enum class CallType {
     
     Unknown,
     CallIn,
-    CallOut
+    CallOut;
+    
+    companion object {
+        
+        @JvmStatic
+        fun typeOf(ordinal: Int): CallType {
+            return values().find { it.ordinal == ordinal } ?: Unknown
+        }
+    }
 }

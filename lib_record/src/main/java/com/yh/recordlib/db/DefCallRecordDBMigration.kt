@@ -4,6 +4,7 @@ import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.TelephonyCenter
 import io.realm.DynamicRealm
+import io.realm.FieldAttribute
 import io.realm.RealmMigration
 
 /**
@@ -55,6 +56,29 @@ class DefCallRecordDBMigration(private val realmMigration: RealmMigration?) : Re
             schema.get("CallRecord")?.addField("hasChinaTELECOM", Boolean::class.java)?.transform {
                 it.set("hasChinaTELECOM", false)
             }
+            oldMainVersion++
+        }
+        if(2L == oldMainVersion){
+            schema.get("CallRecord")?.addField("originCallNumber", String::class.java, FieldAttribute.REQUIRED)?.transform {
+                val phoneNumber: String? =
+                    try {
+                        it.getString("phoneNumber")
+                    } catch(e: Exception) {
+                        null
+                    }
+                it.setString(
+                    "originCallNumber",
+                    phoneNumber
+                        ?: ""
+                )
+            }
+            schema.get("SystemCallRecord")?.removeField("lastModify")
+            oldMainVersion++
+        }
+        if(3L == oldMainVersion){
+            schema.remove("FakeCallRecord")
+            schema.get("CallRecord")?.removeField("originCallNumber")
+            schema.get("CallRecord")?.removeField("isFake")
             oldMainVersion++
         }
         if(oldVersions.second < newVersions.second) {

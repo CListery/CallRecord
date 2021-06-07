@@ -25,10 +25,12 @@ import com.yh.appinject.InjectHelper
 import com.yh.appinject.logger.ext.libE
 import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.cons.TelephonyProperties
+import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.inject.IRecordAppInject
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.lang.InvalidSubscriberIdException
+import com.yh.recordlib.utils.isMIUI
 
 /**
  * Created by CYH on 2019-06-03 10:09
@@ -150,7 +152,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
     private val mITelephonyRegister: ITelephonyRegistry? by lazy { initITelephonyRegister() }
 
     override fun init() {
-        initNotification()
+        // initNotification()
     }
 
     private fun initNotification() {
@@ -582,21 +584,32 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             libW("call fail!")
             return
         }
-        if (PermissionChecker.PERMISSION_GRANTED != PermissionChecker.checkSelfPermission(
-                context,
-                Manifest.permission.CALL_PHONE
-            )
-        ) {
+        if (PermissionChecker.PERMISSION_GRANTED != PermissionChecker.checkSelfPermission(context, Manifest.permission.CALL_PHONE)) {
             showTipMsg("请打开拨打电话的权限")
             return
         }
         if(null != iRecordCallback) {
             iRecordService.registerRecordCallback(iRecordCallback)
         }
-        iRecordService.startListen(callNumber)
-        val intent = Intent(Intent.ACTION_CALL)
+        iRecordService.startListen(callNumber, CallType.CallOut)
+        val intent = Intent(Intent.ACTION_CALL) // 必须使用call方式，否则无法校验电信卡时长
         intent.data = Uri.parse("tel:$callNumber")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
+        if(isMIUI){
+            showTipMsg("如小米手机无法拨打请进入系统设置手动开启拨打电话权限")
+        }
     }
+    
+    fun listenCall(callNumber: String?, iRecordService: IRecordService?, iRecordCallback: IRecordCallback?){
+        if (null == callNumber || null == iRecordService) {
+            libW("call fail!")
+            return
+        }
+        if(null != iRecordCallback) {
+            iRecordService.registerRecordCallback(iRecordCallback)
+        }
+        iRecordService.startListen(callNumber, CallType.CallIn)
+    }
+    
 }

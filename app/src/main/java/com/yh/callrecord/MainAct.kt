@@ -6,12 +6,12 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
-import com.yh.krealmextensions.save
 import com.yh.appinject.logger.ext.libD
 import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.logD
 import com.yh.appinject.logger.logE
 import com.yh.appinject.logger.logW
+import com.yh.krealmextensions.save
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.IManualSyncCallback
 import com.yh.recordlib.ISyncCallback
@@ -35,30 +35,29 @@ import kotlin.concurrent.thread
 class MainAct : Activity(),
                 AndLinker.BindCallback {
     
-    
     private var mRecordService: IRecordService? = null
     private val mBindSuccess = AtomicBoolean(false)
     
     private var mLastRecordId: String? = null
     
     private val mRecordCallback: IRecordCallback = object : IRecordCallback {
-        override fun onRecordIdCreated(recordId: String) {
-            logD("onRecordIdCreated: $recordId")
-            mLastRecordId = recordId
+        override fun onRecordIdCreated(callRecord: CallRecord) {
+            logD("onRecordIdCreated: $callRecord")
+            mLastRecordId = callRecord.recordId
         }
-    
+        
         override fun onCallIn(recordId: String) {
             logD("onCallIn: $recordId")
         }
-    
+        
         override fun onCallOut(recordId: String) {
             logD("onCallOut: $recordId")
         }
-    
+        
         override fun onCallEnd(recordId: String) {
             logD("onCallEnd: $recordId")
         }
-    
+        
         override fun onCallOffHook(recordId: String) {
             logD("onCallOffHook: $recordId")
         }
@@ -69,11 +68,11 @@ class MainAct : Activity(),
             override fun onSyncDone(logFile: File) {
                 logW(logFile)
             }
-    
+            
             override fun onSyncSuccess(record: CallRecord) {
                 logW("onSyncSuccess: ${record.recordId}")
             }
-    
+            
             override fun onSyncFail(record: CallRecord) {
                 logE("onSyncFail: ${record.recordId}")
             }
@@ -131,17 +130,19 @@ class MainAct : Activity(),
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(2)}")
         }
         findViewById<View>(R.id.mGetLastRecord)?.setOnClickListener {
-            queryLastRecord()?.apply {
-                findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
-                findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber\nFake: $isFake"
-                findViewById<TextView>(R.id.mDurationTxt).text = "Duration: $duration"
-                findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${getFormatDate()}"
-                findViewById<TextView>(R.id.mSyncTxt).text = "Synced: $synced"
-                findViewById<TextView>(R.id.mSubIdTxt).text = "SubId: $phoneAccountId\nMccMnc: $mccMnc"
-            }
-                ?: apply {
-                    findViewById<View>(R.id.mRecordLayout).visibility = View.GONE
+            queryLastRecord {
+                it?.apply {
+                    findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
+                    findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber"
+                    findViewById<TextView>(R.id.mDurationTxt).text = "Duration: $duration"
+                    findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${getFormatDate()}"
+                    findViewById<TextView>(R.id.mSyncTxt).text = "Synced: $synced"
+                    findViewById<TextView>(R.id.mSubIdTxt).text = "SubId: $phoneAccountId\nMccMnc: $mccMnc"
                 }
+                    ?: apply {
+                        findViewById<View>(R.id.mRecordLayout).visibility = View.GONE
+                    }
+            }
         }
         findViewById<View>(R.id.mManualSync)?.setOnClickListener {
             CallRecordController.get().registerRecordSyncListener(mManualSyncListener)

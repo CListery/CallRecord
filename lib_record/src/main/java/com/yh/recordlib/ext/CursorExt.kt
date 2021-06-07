@@ -16,14 +16,14 @@ fun <T : Any> Cursor.get(columnIndex: Int, defaultVal: T): T {
         return defaultVal
     }
     return when(defaultVal) {
-        is Long -> getLong(columnIndex)
-        is Int -> getInt(columnIndex)
-        is String -> getString(columnIndex)
-        is Double -> getDouble(columnIndex)
-        is Float -> getFloat(columnIndex)
+        is Long      -> getLong(columnIndex)
+        is Int       -> getInt(columnIndex)
+        is String    -> getString(columnIndex)
+        is Double    -> getDouble(columnIndex)
+        is Float     -> getFloat(columnIndex)
         is ByteArray -> getBlob(columnIndex)
-        is Boolean -> getInt(columnIndex) == 1
-        else -> defaultVal
+        is Boolean   -> getInt(columnIndex) == 1
+        else         -> defaultVal
     } as T
 }
 
@@ -33,24 +33,21 @@ fun Cursor.parseSystemRecord(
     columnIndexDuration: Int,
     columnIndexType: Int,
     columnIndexSubscriptionId: Int,
-    numberColumnIndexes: Array<Int>,
-    columnIndexLastModified: Int
+    numberColumnIndexes: Array<Int>
 ): SystemCallRecord {
     return SystemCallRecord().apply {
         callId = get(columnIndexId, -1L)
         date = get(columnIndexDate, -1L)
         duration = get(columnIndexDuration, -1L)
         type = get(columnIndexType, -1)
-        //这个获取不到也不影响，recalculateDuration 会处理通话时长
         phoneAccountId = get(columnIndexSubscriptionId, -1)
         numberColumnIndexes.forEach {
             val tmpNumber = get(it, "")
-            if(tmpNumber.isNotEmpty()){
+            if(tmpNumber.isNotEmpty()) {
                 phoneNumber = TelephonyCenter.get().filterGarbageInPhoneNumber(tmpNumber)
                 return@forEach
             }
         }
-        lastModify = get(columnIndexLastModified, -1L)
     }
 }
 
@@ -86,20 +83,19 @@ fun Cursor?.parseSystemCallRecords(
         }
         val columnIndexNumber = result.getColumnIndex(CallLog.Calls.NUMBER)
         val columnIndexMatchedNumber = result.getColumnIndex("matched_number")
-        val columnIndexLastModified = result.getColumnIndex("last_modified")
         
         do {
-            records.add(
-                result.parseSystemRecord(
-                    columnIndexId,
-                    columnIndexDate,
-                    columnIndexDuration,
-                    columnIndexType,
-                    columnIndexSubscriptionId,
-                    arrayOf(columnIndexNumber, columnIndexMatchedNumber),
-                    columnIndexLastModified
-                )
+            val sr = result.parseSystemRecord(
+                columnIndexId,
+                columnIndexDate,
+                columnIndexDuration,
+                columnIndexType,
+                columnIndexSubscriptionId,
+                arrayOf(columnIndexNumber, columnIndexMatchedNumber)
             )
+            if(sr.phoneNumber.isNotEmpty()) {
+                records.add(sr)
+            }
         } while(result.moveToNext())
     }
     successAction?.invoke(records)

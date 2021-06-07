@@ -18,10 +18,6 @@
             android:name="com.yh.recordlib.service.RecordCallService"
             android:exported="false" />
         <service
-            android:name="com.yh.recordlib.service.JobRecordCallService"
-            android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-        <service
             android:name="com.yh.recordlib.service.SyncCallService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />

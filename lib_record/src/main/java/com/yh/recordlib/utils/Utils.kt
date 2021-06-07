@@ -1,8 +1,9 @@
 package com.yh.recordlib.utils
 
+import android.os.Build
 import android.util.Log
 
-fun logLevel(value: Int): String? {
+fun logLevel(value: Int): String {
     return when(value) {
         Log.VERBOSE -> "V"
         Log.DEBUG   -> "D"
@@ -13,3 +14,5 @@ fun logLevel(value: Int): String? {
         else        -> "UNKNOWN"
     }
 }
+
+internal val isMIUI by lazy { Build.MANUFACTURER.contains("xiaomi", true) }

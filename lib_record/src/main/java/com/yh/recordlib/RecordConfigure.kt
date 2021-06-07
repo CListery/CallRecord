@@ -17,5 +17,6 @@ class RecordConfigure(
     val maxRetryCount: Int = 2,
     val modules: (() -> Array<*>)? = { emptyArray<Any>() },
     val maxCallTimeOffset: Long = BuildConfig.MAX_CALL_TIME_OFFSET,
-    val minCallTimeOffset: Long = BuildConfig.MIN_CALL_TIME_OFFSET
+    val minCallTimeOffset: Long = BuildConfig.MIN_CALL_TIME_OFFSET,
+    val startTimeOffset:Long = BuildConfig.START_CALL_TIME_OFFSET
 )

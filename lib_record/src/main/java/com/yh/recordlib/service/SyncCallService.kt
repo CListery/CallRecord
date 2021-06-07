@@ -12,8 +12,6 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.core.app.SafeJobIntentService
 import androidx.core.content.PermissionChecker
-import com.yh.krealmextensions.delete
-import com.yh.krealmextensions.save
 import com.yh.appinject.logger.LibLogs
 import com.yh.appinject.logger.ext.libCursor
 import com.yh.appinject.logger.ext.libD
@@ -21,13 +19,12 @@ import com.yh.appinject.logger.ext.libE
 import com.yh.appinject.logger.ext.libP
 import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.impl.TheLogAdapter
+import com.yh.krealmextensions.saveAll
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.db.DefCallRecordDBMigration
 import com.yh.recordlib.entity.CallRecord
-import com.yh.recordlib.entity.CallType
-import com.yh.recordlib.entity.FakeCallRecord
 import com.yh.recordlib.entity.SystemCallRecord
 import com.yh.recordlib.ext.findAllUnSyncRecords
 import com.yh.recordlib.ext.findRecordById
@@ -35,7 +32,7 @@ import com.yh.recordlib.ext.parseSystemCallRecords
 import com.yh.recordlib.log.ManualSyncLogFormatStrategy
 import com.yh.recordlib.notifier.RecordSyncNotifier
 import com.yh.recordlib.utils.DeviceUtils
-import kotlin.math.abs
+import com.yh.recordlib.utils.RecordFilter.findMappingRecords
 import kotlin.math.max
 
 /**
@@ -44,11 +41,12 @@ import kotlin.math.max
 class SyncCallService : SafeJobIntentService() {
     
     companion object {
+        
         /**
          * Unique job ID for this service.
          */
         private const val JOB_ID = 10001
-
+        
         @JvmStatic
         fun enqueueWork(context: Context, recordId: String?) {
             TelephonyCenter.get().libW("enqueueWork1: $context - $recordId")
@@ -58,7 +56,7 @@ class SyncCallService : SafeJobIntentService() {
                 enqueueWork(context)
             }
         }
-
+        
         @JvmStatic
         fun enqueueWork(context: Context, work: Intent = Intent()) {
             TelephonyCenter.get().libW("enqueueWork2: $context - $work")
@@ -90,7 +88,7 @@ class SyncCallService : SafeJobIntentService() {
         }
         val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
         printLog(Log.WARN, "onHandleWork: $recordId - $isManualSync")
-        if(!hasCallLogPermission()){
+        if(!hasCallLogPermission()) {
             printLog(Log.ERROR, "No permission operator call_log!")
             return
         }
@@ -102,8 +100,10 @@ class SyncCallService : SafeJobIntentService() {
     }
     
     private fun hasCallLogPermission(): Boolean {
-        return PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(applicationContext,
-            Manifest.permission.READ_CALL_LOG)
+        return PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.READ_CALL_LOG
+        )
     }
     
     private fun syncAllRecord(work: Intent) {
@@ -112,171 +112,120 @@ class SyncCallService : SafeJobIntentService() {
             TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
             return
         }
-        val tmpUnSyncRecords = findAllUnSyncRecords()
-        TelephonyCenter.get().libD("syncAllRecord: tmpUnSyncRecords -> ${tmpUnSyncRecords?.toString()}")
-        if(null == tmpUnSyncRecords || tmpUnSyncRecords.isEmpty()) {
-            return
-        }
-        
-        val allUnSyncRecords = ArrayList(tmpUnSyncRecords)
-        
-        var firstCallStartTime: Long = System.currentTimeMillis()
-        var lastCallEndTime = 0L
-        allUnSyncRecords.forEach { record ->
-            if(record.callStartTime in 1 until firstCallStartTime) {
-                firstCallStartTime = record.callStartTime
+    
+        findAllUnSyncRecords { tmpUnSyncRecords ->
+            TelephonyCenter.get().libD("syncAllRecord: tmpUnSyncRecords -> $tmpUnSyncRecords")
+            if(tmpUnSyncRecords.isEmpty()){
+                return@findAllUnSyncRecords
             }
-            if(record.callEndTime > lastCallEndTime) {
-                lastCallEndTime = record.callEndTime
-            }
-        }
-        // 在监听过程中 APP 崩溃或被系统强制杀死时将监听不到通话结束时间
-        // 如异常通话记录的通话开始时间大于所有正常通话记录的结束时间，则以最后一条异常记录的开始时间+30分钟作为最后一条通话记录的结束时间
-        val allExceptionRecord = allUnSyncRecords.filter { it.callEndTime <= 0 }
-        if(allExceptionRecord.isNotEmpty()) {
-            val lastStartRecord = allExceptionRecord.maxByOrNull { it.callStartTime }
-            if(null != lastStartRecord) {
-                if(lastStartRecord.callStartTime > lastCallEndTime){
-                    lastCallEndTime = lastStartRecord.callStartTime + 1800000
+    
+            var allUnSyncRecords: List<CallRecord> = ArrayList(tmpUnSyncRecords)
+    
+            var firstCallStartTime: Long = System.currentTimeMillis()
+            var lastCallEndTime = 0L
+            allUnSyncRecords.forEach { record ->
+                if(record.callStartTime in 1 until firstCallStartTime) {
+                    firstCallStartTime = record.callStartTime
+                }
+                if(record.callEndTime > lastCallEndTime) {
+                    lastCallEndTime = record.callEndTime
                 }
             }
-        }
-        try {
-            val selection = StringBuilder()
-            selection.append(CallLog.Calls.DATE)
-            selection.append(" ")
-            selection.append("BETWEEN")
-            selection.append(" ")
-            selection.append("?")
-            selection.append(" ")
-            selection.append("AND")
-            selection.append(" ")
-            selection.append("?")
-            
-            val args: ArrayList<String> = arrayListOf(
-                firstCallStartTime.minus(TelephonyCenter.get().getRecordConfigure().minCallTimeOffset).toString(),
-                lastCallEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset).toString()
-            )
-            val sort = CallLog.Calls.DEFAULT_SORT_ORDER
-            
-            TelephonyCenter.get().libD("syncAllRecord: selection -> $selection ; args -> $args")
-    
-            @SuppressLint("Recycle")
-            // close by #parseSystemCallRecords
-            val callLogResult = callLogClient.query(
-                CallLog.Calls.CONTENT_URI,
-                null,
-                selection.toString(),
-                args.toArray(arrayOf<String>()),
-                sort
-            )
-            TelephonyCenter.get().libCursor(callLogResult)
-    
-            callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
-                if(systemRecords.isNotEmpty()) {
-                    var syncedCount = 0
-                    systemRecords.forEach sys@{ sr ->
-                        var targetRecords = ArrayList(allUnSyncRecords).filter { cr ->
-                            coarseFilter(sr, cr)
+            // 在监听过程中 APP 崩溃或被系统强制杀死时将监听不到通话结束时间
+            // 如异常通话记录的通话开始时间大于所有正常通话记录的结束时间，则以最后一条异常记录的开始时间+30分钟作为最后一条通话记录的结束时间
+            val allExceptionRecord = allUnSyncRecords.filter { it.callEndTime <= 0 }
+            if(allExceptionRecord.isNotEmpty()) {
+                val lastStartRecord = allExceptionRecord.maxByOrNull { it.callStartTime }
+                if(null != lastStartRecord) {
+                    if(lastStartRecord.callStartTime > lastCallEndTime) {
+                        lastCallEndTime = lastStartRecord.callStartTime + 1800000
+                    }
+                }
+            }
+            try {
+                val selection = StringBuilder()
+                selection.append(CallLog.Calls.DATE)
+                selection.append(" ")
+                selection.append("BETWEEN")
+                selection.append(" ")
+                selection.append("?")
+                selection.append(" ")
+                selection.append("AND")
+                selection.append(" ")
+                selection.append("?")
+        
+                val args: ArrayList<String> = arrayListOf(
+                    firstCallStartTime.minus(TelephonyCenter.get().getRecordConfigure().startTimeOffset).toString(),
+                    lastCallEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset).toString()
+                )
+                val sort = CallLog.Calls.DEFAULT_SORT_ORDER
+        
+                TelephonyCenter.get().libD("syncAllRecord: selection -> $selection ; args -> $args")
+        
+                @SuppressLint("Recycle")
+                // close by #parseSystemCallRecords
+                val callLogResult = callLogClient.query(
+                    CallLog.Calls.CONTENT_URI,
+                    null,
+                    selection.toString(),
+                    args.toArray(arrayOf<String>()),
+                    sort
+                )
+                TelephonyCenter.get().libCursor(callLogResult)
+        
+                callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
+                    if(systemRecords.isNotEmpty()) {
+                        val recordMappingInfo = findMappingRecords(systemRecords, allUnSyncRecords)
+                
+                        allUnSyncRecords = recordMappingInfo.noMappingRecords
+                
+                        if(recordMappingInfo.unUseSystemCallRecords.isNotEmpty()) {
+                            TelephonyCenter.get().libW("syncAllRecord: Ignored Sys records: ${recordMappingInfo.unUseSystemCallRecords}")
                         }
-                        if(targetRecords.isNotEmpty()) {
-                            val maxOffset = reloadMaxOffset(sr, targetRecords.first())
-                            targetRecords = precisionFilter(sr, targetRecords, 0, maxOffset)
-            
-                            when {
-                                targetRecords.size == 1 -> {
-                                    val target = targetRecords[0]
-                                    syncRecordBySys(target, sr)
-                                    TelephonyCenter.get().libD("syncAllRecord: recordCall -> $target")
-                                    allUnSyncRecords.remove(target)
-                                    syncedCount++
-                                }
                 
-                                targetRecords.isEmpty() -> {
-                                    //该条系统记录不能找到匹配的为同步记录,正常情况,因为没有一直监听
-                                    TelephonyCenter.get().libW("syncAllRecord: Ignored Sys record: $sr")
-                                    return@sys
-                                }
+                        if(recordMappingInfo.mappingRecords.isNotEmpty()) {
+                            TelephonyCenter.get().libW("syncAllRecord: synced records: ${recordMappingInfo.mappingRecords}")
+                            syncRecordBySys(recordMappingInfo.mappingRecords)
+                        }
                 
-                                else                    -> {
-                                    //找到太多相似的记录，尝试同步时间偏移最小的一条
-                                    var target: CallRecord? = null
-                                    var timeOffset = Long.MAX_VALUE
-                                    targetRecords.forEach { cr ->
-                                        if(!cr.isFake){
-                                            if(cr.phoneNumber != sr.phoneNumber){
-                                                return@forEach
-                                            }
-                                        }
-                                        val offset = abs(sr.date - cr.callStartTime)
-                                        if(offset < timeOffset) {
-                                            timeOffset = offset
-                                            target = cr
-                                        }
-                                    }
-                                    if(timeOffset < 20000) { // 最大容许20s以内误差
-                                        TelephonyCenter.get().libW("syncAllRecord: Use min time-offset: $timeOffset record: $target")
-                                        target?.apply {
-                                            syncRecordBySys(this, sr)
-                                            allUnSyncRecords.remove(this)
-                                            syncedCount++
-                                        }
-                                    } else {
-                                        TelephonyCenter.get().libE("syncAllRecord: Find too many similar records: $sr")
-                                    }
-                                    return@sys
-                                }
-                            }
-                        } else {
-                            TelephonyCenter.get().libE("syncAllRecord: Not found target record: $sr")
+                        if(allUnSyncRecords.isNotEmpty()) {
+                            TelephonyCenter.get().libE("syncAllRecord: Failed to sync successfully: $allUnSyncRecords")
+                            markNoMappingRecord(allUnSyncRecords)
+                            CallRecordController.get().retry(work)
+                        }
+                    } else {
+                        if(allUnSyncRecords.isNotEmpty()) {
+                            TelephonyCenter.get().libE("syncAllRecord: Not found sys mapping record!!")
+                            markNoMappingRecord(allUnSyncRecords)
+                            CallRecordController.get().retry(work)
                         }
                     }
-                    TelephonyCenter.get().libW("syncAllRecord: $syncedCount records have been synchronized done!!")
+                }, failAction = {
                     if(allUnSyncRecords.isNotEmpty()) {
-                        TelephonyCenter.get().libE("syncAllRecord: Failed to sync successfully: $allUnSyncRecords")
+                        TelephonyCenter.get().libE("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!")
                         markNoMappingRecord(allUnSyncRecords)
                         CallRecordController.get().retry(work)
                     }
-                } else {
-                    if(allUnSyncRecords.isNotEmpty()) {
-                        TelephonyCenter.get().libE("syncAllRecord: Not found sys mapping record!!")
-                        markNoMappingRecord(allUnSyncRecords)
-                        CallRecordController.get().retry(work)
-                    }
-                }
-            }, failAction = {
+                })
+            } catch(e: Exception) {
                 if(allUnSyncRecords.isNotEmpty()) {
-                    TelephonyCenter.get().libE("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!")
+                    TelephonyCenter.get().libE("syncAllRecord", throwable = e)
                     markNoMappingRecord(allUnSyncRecords)
                     CallRecordController.get().retry(work)
                 }
-            })
-        } catch(e: Exception) {
-            if(allUnSyncRecords.isNotEmpty()) {
-                TelephonyCenter.get().libE("syncAllRecord", throwable = e)
-                markNoMappingRecord(allUnSyncRecords)
-                CallRecordController.get().retry(work)
-            }
-        } finally {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                callLogClient.close()
-            } else {
-                @Suppress("DEPRECATION") callLogClient.release()
+            } finally {
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    callLogClient.close()
+                } else {
+                    @Suppress("DEPRECATION") callLogClient.release()
+                }
             }
         }
     }
     
-    private fun reloadMaxOffset(sr: SystemCallRecord, cr: CallRecord): Long {
-        var maxOffset = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
-        if(sr.date - cr.callStartTime > TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset) {
-            maxOffset = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset * 3
-        }
-        return maxOffset
-    }
-    
-    private fun markNoMappingRecord(allUnSyncRecords: ArrayList<CallRecord>) {
+    private fun markNoMappingRecord(allUnSyncRecords: List<CallRecord>) {
         allUnSyncRecords.forEach {
-            if(isManualSync){
+            if(isManualSync) {
                 it.isManualSynced = true
             }
             if(it.isManualSynced && System.currentTimeMillis() - it.callStartTime > 7200000) {
@@ -284,283 +233,159 @@ class SyncCallService : SafeJobIntentService() {
                 it.isDeleted = true
             }
             it.isNoMapping = true
-            it.save()
         }
-        
-        RecordSyncNotifier.get().notifyRecordSyncStatus(allUnSyncRecords)
-    }
-    
-    private fun precisionFilter(sr: SystemCallRecord, crs: List<CallRecord>, precisionCount: Int, maxOffset: Long): List<CallRecord> {
-        if(precisionCount > maxOffset / TelephonyCenter.get().getRecordConfigure().minCallTimeOffset) {
-            return crs
-        }
-        val tmp: List<CallRecord> = crs.filter { cr ->
-            precisionFilter(sr, cr, precisionCount, maxOffset)
-        }
-        if(tmp.size > 1) {
-            return precisionFilter(sr, tmp, precisionCount.inc(), maxOffset)
-        }
-        return tmp
-    }
-    
-    /**
-     * 精确过滤
-     */
-    private fun precisionFilter(sr: SystemCallRecord, cr: CallRecord, precisionCount: Int, maxOffset: Long): Boolean {
-        //重新计算时间偏移量
-        val timeOffset = maxOffset - (TelephonyCenter.get().getRecordConfigure().minCallTimeOffset * precisionCount)
-        val crStartTime = max(cr.callStartTime, cr.callOffHookTime)
-        if(crStartTime > 0 && cr.callEndTime <= 0) { // 未能监听到结束时间的意外情况
-            if(sr.duration > 0) {
-                return sr.date in (crStartTime - timeOffset)..(crStartTime + timeOffset)
-            }
-        }
-        val endTimeFilter = if(sr.duration > 0) { //（结束时长过滤器）内部数据库记录的通话结束时间 处于
-            // 1.系统数据库通话记录 [开始时间+通话持续时长 +- 一分钟误差范围内]
-            cr.callEndTime in (sr.date + sr.getDurationMillis() - timeOffset)..(sr.date + sr.getDurationMillis() + timeOffset)
-                    // 2.系统数据库通话记录 [最后修改时间 +- 一分钟误差范围内]（部分机型有该值）
-                    || (sr.lastModify > 0 && cr.callEndTime in (sr.lastModify - timeOffset)..(sr.lastModify + timeOffset))
-        } else {
-            //系统记录未接通,只判断开始时间
-            return sr.date in (crStartTime - timeOffset)..(crStartTime + timeOffset)
-        }
-        val startTimeFilter = // 开始时长过滤器
-            if(CallType.CallIn.ordinal == cr.callType) { // 呼入
-                if(cr.callOffHookTime > 0) {
-                    //当属于呼入类型且接通时开始时间以接通时间为准
-                    var filter = sr.date in (cr.callOffHookTime - timeOffset)..(cr.callOffHookTime + timeOffset)
-                    if(!filter && endTimeFilter) {
-                        //如果某些机型系统数据库中开始时间不是以接通时间,则使用开始时间为准
-                        filter = sr.date in (crStartTime - timeOffset)..(crStartTime + timeOffset)
-                    }
-                    filter
-                } else {
-                    false
-                }
-            } else { // 呼出
-                // 系统数据库通话记录 [开始时间] == 内部数据库通话记录 [开始时间 +- 一分钟误差范围内]
-                sr.date in (crStartTime - timeOffset)..(crStartTime + timeOffset)
-            }
-        return startTimeFilter && endTimeFilter
-    }
-    
-    /**
-     * 粗略过滤
-     * 1. 未能获取到号码的情况使用时间范围过滤
-     * 2. 号码相同的情况直接过滤
-     */
-    private fun coarseFilter(
-        sr: SystemCallRecord, cr: CallRecord, timeOffset: Long = TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
-    ): Boolean {
-        return if(sr.phoneNumber.isEmpty() || cr.isFake) { // 号码未能正常获取，使用时间范围进行模糊过滤
-            val crStartTime = max(cr.callStartTime, cr.callOffHookTime) // 获取通话开始时间
-            val endTimeFilter = //（结束时长过滤器）内部数据库记录的通话结束时间 处于
-                // 1.系统数据库通话记录 [开始时间+通话持续时长 +- 一分钟误差范围内]
-                cr.callEndTime in (sr.date + sr.getDurationMillis() - timeOffset)..(sr.date + sr.getDurationMillis() + timeOffset)
-                        // 2.系统数据库通话记录 [最后修改时间 +- 一分钟误差范围内]（部分机型有该值）
-                        || (sr.lastModify > 0 && cr.callEndTime in (sr.lastModify - timeOffset)..(sr.lastModify + timeOffset))
-            val startTimeFilter = // 开始时长过滤器
-                if(CallType.CallIn.ordinal == cr.callType) { // 呼入
-                    if(cr.callOffHookTime > 0) {
-                        var filter = sr.date in (cr.callOffHookTime - timeOffset)..(cr.callOffHookTime + timeOffset)
-                        if(!filter && endTimeFilter) {
-                            filter = sr.date in (crStartTime - timeOffset)..(crStartTime + timeOffset)
-                        }
-                        filter
-                    } else {
-                        false
-                    }
-                } else { // 呼出
-                    // 系统数据库通话记录 [开始时间] == 内部数据库通话记录 [开始时间 +- 一分钟误差范围内]
-                    sr.date in (crStartTime - timeOffset)..(crStartTime + timeOffset)
-                }
-            startTimeFilter && endTimeFilter
-        } else {
-            //号码过滤
-            cr.phoneNumber == sr.phoneNumber
-        }
+        val callRecords = allUnSyncRecords.toList()
+        callRecords.saveAll()
+        RecordSyncNotifier.get().notifyRecordSyncStatus(callRecords)
     }
     
     /**
      * 同步指定的记录
      */
     private fun syncTargetRecord(work: Intent, recordId: String) {
-        val recordCall = findRecordById(recordId)
-        printLog(Log.DEBUG, "syncTargetRecord: $recordCall")
-        // TelephonyCenter.get().libD("syncTargetRecord: $recordCall")
-        if(null == recordCall) {
-            return
-        }
-        
-        val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
-        if(null == callLogClient) {
-            printLog(Log.ERROR, "Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
-            // TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
-            return
-        }
-        
-        try {
-            val selection = StringBuilder()
-            selection.append(CallLog.Calls.DATE)
-            selection.append(" ")
-            selection.append("BETWEEN")
-            selection.append(" ")
-            selection.append("?")
-            selection.append(" ")
-            selection.append("AND")
-            selection.append(" ")
-            selection.append("?")
-            
-            val callStartTime = recordCall.callStartTime.minus(
-                TelephonyCenter.get().getRecordConfigure().minCallTimeOffset
-            )
-            val callEndTime = if(recordCall.callEndTime <= 0L) {
-                callStartTime + 1800000
-            } else {
-                recordCall.callEndTime.plus(
-                    TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
-                )
+        findRecordById(recordId) { recordCall ->
+            printLog(Log.DEBUG, "syncTargetRecord: $recordCall")
+            if(null == recordCall){
+                return@findRecordById
             }
             
-            val args: ArrayList<String> = arrayListOf(
-                callStartTime.toString(),
-                callEndTime.toString()
-            )
+            val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
+            if(null == callLogClient) {
+                printLog(Log.ERROR, "Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
+                return@findRecordById
+            }
             
-            if(!recordCall.isFake && !TextUtils.isEmpty(recordCall.phoneNumber)) {
+            try {
+                val selection = StringBuilder()
+                selection.append(CallLog.Calls.DATE)
+                selection.append(" ")
+                selection.append("BETWEEN")
+                selection.append(" ")
+                selection.append("?")
+                selection.append(" ")
+                selection.append("AND")
+                selection.append(" ")
+                selection.append("?")
+        
+                val callStartTime = recordCall.callStartTime.minus(
+                    TelephonyCenter.get().getRecordConfigure().startTimeOffset
+                )
+                val callEndTime = if(recordCall.callEndTime <= 0L) {
+                    callStartTime + 1800000
+                } else {
+                    recordCall.callEndTime.plus(
+                        TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
+                    )
+                }
+        
+                val args: ArrayList<String> = arrayListOf(
+                    callStartTime.toString(),
+                    callEndTime.toString()
+                )
+        
                 selection.append(" ")
                 selection.append("and")
                 selection.append(" ")
                 selection.append(CallLog.Calls.NUMBER)
                 selection.append("=?")
-                
+        
                 args.add(recordCall.phoneNumber)
-            }
-            
-            val sort = CallLog.Calls.DEFAULT_SORT_ORDER
-            
-            try {
-                printLog(
-                    Log.DEBUG,
-                    "selection: ${selection.toString().replace("?", "%s")
-                        .format(*args.toArray())} $sort"
+        
+                val sort = CallLog.Calls.DEFAULT_SORT_ORDER
+        
+                try {
+                    printLog(
+                        Log.DEBUG,
+                        "selection: ${selection.toString().replace("?", "%s").format(*args.toArray())} $sort"
+                    )
+                } catch(e: Exception) {
+                }
+                
+                @SuppressLint("Recycle")
+                // close by #parseSystemCallRecords
+                val callLogResult = callLogClient.query(
+                    CallLog.Calls.CONTENT_URI,
+                    null,
+                    selection.toString(),
+                    args.toArray(arrayOf<String>()),
+                    sort
                 )
-            } catch(e: Exception) {
-            }
-            
-            @SuppressLint("Recycle")
-            // close by #parseSystemCallRecords
-            val callLogResult = callLogClient.query(
-                CallLog.Calls.CONTENT_URI,
-                null,
-                selection.toString(),
-                args.toArray(arrayOf<String>()),
-                sort
-            )
-            printLog(Log.DEBUG, callLogResult)
-            // TelephonyCenter.get().libCursor(callLogResult)
-            
-            callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
-                if(systemRecords.isNotEmpty()) {
-                    if(systemRecords.size == 1) {
-                        // 只有一条记录的情况直接进行同步
-                        syncRecordBySys(recordCall, systemRecords.first())
-                        printLog(
-                            Log.DEBUG,
-                            "syncTargetRecord: just find single Sys record, sync this!"
-                        )
-                        // TelephonyCenter.get().libD("syncTargetRecord: just find single Sys record, sync this!")
-                        return@parseSystemCallRecords
-                    }
-                    //                    TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $recordCall")
-                    //                    syncRecordBySys(recordCall, systemRecords[0])
-                    val maxOffset = reloadMaxOffset(systemRecords.first(), recordCall)
-                    systemRecords.forEach sys@{ sr ->
-                        if(coarseFilter(sr, recordCall)) {
-                            val targetRecords = precisionFilter(sr, arrayListOf(recordCall), 0, maxOffset)
-                            when {
-                                targetRecords.size == 1 -> {
-                                    val target = targetRecords[0]
-                                    syncRecordBySys(target, sr)
-                                    printLog(
-                                        Log.DEBUG,
-                                        "syncTargetRecord: recordCall -> $target"
-                                    )
-                                    // TelephonyCenter.get().libD("syncTargetRecord: recordCall -> $target")
-                                    return@parseSystemCallRecords
-                                }
-                                
-                                targetRecords.isEmpty() -> {
-                                    //该条系统记录不能找到匹配的为同步记录,正常情况,因为没有一直监听
-                                    printLog(
-                                        Log.WARN,
-                                        "syncTargetRecord: Ignored Sys record: $sr"
-                                    )
-                                    // TelephonyCenter.get().libW("syncTargetRecord: Ignored Sys record: $sr")
-                                }
+                printLog(Log.DEBUG, callLogResult)
+                
+                callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
+                    if(systemRecords.isNotEmpty()) {
+                        if(systemRecords.size == 1) {
+                            // 只有一条记录的情况直接进行同步
+                            syncRecordBySys(mapOf(systemRecords.first() to recordCall))
+                            printLog(Log.DEBUG, "syncTargetRecord: just find single Sys record, sync this!")
+                            return@parseSystemCallRecords
+                        }
+                        val recordMappingInfo = findMappingRecords(systemRecords, listOf(recordCall))
+                        
+                        if(recordMappingInfo.unUseSystemCallRecords.isNotEmpty()) {
+                            printLog(Log.WARN, "syncTargetRecord: Ignored Sys records: ${recordMappingInfo.unUseSystemCallRecords}")
+                        }
+                        
+                        if(recordMappingInfo.mappingRecords.isNotEmpty()) {
+                            printLog(Log.DEBUG, "syncTargetRecord: synced records: ${recordMappingInfo.mappingRecords}")
+                            syncRecordBySys(recordMappingInfo.mappingRecords)
+                        }
+                        
+                        if(recordMappingInfo.noMappingRecords.isNotEmpty()) {
+                            printLog(Log.ERROR, "syncAllRecord: not found mapping records: ${recordMappingInfo.noMappingRecords}")
+                            markNoMappingRecord(recordMappingInfo.noMappingRecords)
+                            if(isManualSync) {
+                                submitSysRecords(callLogClient, recordCall)
+                            } else {
+                                CallRecordController.get().retry(work)
                             }
+                        }
+                    } else {
+                        printLog(Log.WARN, "syncTargetRecord: Not found sys mapping record!! -> $recordCall")
+                        markNoMappingRecord(listOf(recordCall))
+                        if(isManualSync) {
+                            submitSysRecords(callLogClient, recordCall)
                         } else {
-                            printLog(
-                                Log.ERROR,
-                                "syncTargetRecord: Not found target record: $sr"
-                            )
-                            // TelephonyCenter.get().libE("syncTargetRecord: Not found target record: $sr")
+                            CallRecordController.get().retry(work)
                         }
                     }
-                }
-                printLog(
-                    Log.WARN,
-                    "syncTargetRecord: Not found sys mapping record!! -> $recordCall"
-                )
-                // TelephonyCenter.get().libW("syncTargetRecord: Not found sys mapping record!! -> $recordCall")
+                }, failAction = {
+                    printLog(Log.WARN, "syncTargetRecord: Not found any record with $selection from system db! -> $recordCall")
+                    markNoMappingRecord(arrayListOf(recordCall))
+                    if(isManualSync) {
+                        submitSysRecords(callLogClient, recordCall)
+                    } else {
+                        CallRecordController.get().retry(work)
+                    }
+                })
+            } catch(e: Exception) {
+                printLog(Log.ERROR, "syncTargetRecord", throwable = e)
+                markNoMappingRecord(arrayListOf(recordCall))
                 if(isManualSync) {
                     submitSysRecords(callLogClient, recordCall)
-                }
-                markNoMappingRecord(arrayListOf(recordCall))
-                if(!isManualSync) {
+                } else {
                     CallRecordController.get().retry(work)
                 }
-            }, failAction = {
-                printLog(
-                    Log.WARN,
-                    "syncTargetRecord: Not found any record with $selection from system db! -> $recordCall"
-                )
-                // TelephonyCenter.get().libW("syncTargetRecord: Not found any record with $selection from system db! -> $recordCall")
-                if(isManualSync) {
-                    submitSysRecords(callLogClient, recordCall)
+            } finally {
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    callLogClient.close()
+                } else {
+                    @Suppress("DEPRECATION") callLogClient.release()
                 }
-                markNoMappingRecord(arrayListOf(recordCall))
-                if(!isManualSync) {
-                    CallRecordController.get().retry(work)
-                }
-            })
-        } catch(e: Exception) {
-            printLog(Log.ERROR, "syncTargetRecord", throwable = e)
-            // TelephonyCenter.get().libE("syncTargetRecord", throwable = e)
-            markNoMappingRecord(arrayListOf(recordCall))
-            if(!isManualSync) {
-                CallRecordController.get().retry(work)
-            }
-        } finally {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                callLogClient.close()
-            } else {
-                @Suppress("DEPRECATION") callLogClient.release()
             }
         }
     }
     
     private fun submitSysRecords(callLogClient: ContentProviderClient, recordCall: CallRecord) {
         printLog(Log.INFO, "==============[BEGIN SYS RECORDS]==============")
-    
+        
         printLog(Log.INFO, "|| [CALL RECORD]")
         printLog(Log.INFO, recordCall)
-    
-        if(!recordCall.isFake && !TextUtils.isEmpty(recordCall.phoneNumber)) {
-            printLog(Log.INFO, "|| [THIS RECORD NOT FAKE]")
+        
+        if(!TextUtils.isEmpty(recordCall.phoneNumber)) {
             printLog(Log.INFO, "|| callRecord phone: ${recordCall.phoneNumber}")
         }
-    
+        
         val selection = StringBuilder()
         selection.append(CallLog.Calls.DATE)
         selection.append(" ")
@@ -571,36 +396,33 @@ class SyncCallService : SafeJobIntentService() {
         selection.append("AND")
         selection.append(" ")
         selection.append("?")
-    
+        
         val callStartTime = recordCall.callStartTime.minus(
-            TelephonyCenter.get().getRecordConfigure().minCallTimeOffset
+            600000
         )
         val callEndTime = if(recordCall.callEndTime <= 0L) {
             callStartTime + 1800000
         } else {
-            recordCall.callEndTime.plus(
-                TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset
-            )
+            recordCall.callEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset)
         }
-    
+        
         val args: ArrayList<String> = arrayListOf(
             callStartTime.toString(),
             callEndTime.toString()
         )
-    
+        
         val sort = CallLog.Calls.DEFAULT_SORT_ORDER
-    
+        
         try {
             printLog(Log.INFO, "|| [SELECTION]")
             printLog(
                 Log.DEBUG,
-                "selection: ${selection.toString().replace("?", "%s")
-                    .format(*args.toArray())} $sort"
+                "selection: ${selection.toString().replace("?", "%s").format(*args.toArray())} $sort"
             )
         } catch(e: Exception) {
             printLog(Log.ERROR, "submitSysRecords", e)
         }
-    
+        
         try {
             printLog(Log.INFO, "|| [SYS RECORDS]")
             val systemRecords = callLogClient.query(
@@ -610,12 +432,17 @@ class SyncCallService : SafeJobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            printLog(Log.INFO, systemRecords)
-            systemRecords?.close()
+            systemRecords.parseSystemCallRecords({
+                printCursor(systemRecords, true)
+                printLog(Log.DEBUG, "----------------------------------------")
+                printLog(Log.INFO, it.mapIndexed { index, systemCallRecord -> "| $index $systemCallRecord" }.joinToString("\n"))
+            }, {
+                printCursor(systemRecords)
+            })
         } catch(e: Exception) {
             printLog(Log.ERROR, "submitSysRecords", e)
         }
-    
+        
         printLog(Log.INFO, "===============[END SYS RECORDS]===============")
     }
     
@@ -644,6 +471,7 @@ class SyncCallService : SafeJobIntentService() {
             printLog(Log.INFO, "|| MRC: ${configure.maxRetryCount}")
             printLog(Log.INFO, "|| MAX_OFFSET: ${(configure.maxCallTimeOffset / 1000)}s")
             printLog(Log.INFO, "|| MIN_OFFSET: ${(configure.minCallTimeOffset / 1000)}s")
+            printLog(Log.INFO, "|| START_OFFSET: ${(configure.startTimeOffset / 1000)}s")
         } catch(e: Exception) {
             printLog(Log.ERROR, "printConfigInfo", throwable = e)
         }
@@ -690,62 +518,58 @@ class SyncCallService : SafeJobIntentService() {
         RecordSyncNotifier.get().notifyManualSyncDone(strategy?.getRealLogFile())
     }
     
-    private fun printLog(
-        priority: Int = Log.DEBUG,
-        obj: Any?,
-        throwable: Throwable? = null
-    ) {
+    private fun printCursor(cursor: Cursor?, justCurRow: Boolean = false) {
         if(isManualSync && null != manualSyncLogAdapter) {
-            if(obj is Cursor?) {
-                LibLogs.logCursor(obj, logAdapter = manualSyncLogAdapter)
-                return
-            }
+            LibLogs.logCursor(cursor, justCurRow, logAdapter = manualSyncLogAdapter)
+        } else {
+            TelephonyCenter.get().libCursor(cursor, justCurRow)
+        }
+    }
+    
+    private fun printLog(priority: Int = Log.DEBUG, obj: Any?, throwable: Throwable? = null) {
+        if(obj is Cursor?) {
+            printCursor(obj)
+            return
+        }
+        if(isManualSync && null != manualSyncLogAdapter) {
             LibLogs.logP(priority, obj, logAdapter = manualSyncLogAdapter, throwable = throwable)
         } else {
-            if(obj is Cursor?) {
-                TelephonyCenter.get().libCursor(obj)
-                return
-            }
             TelephonyCenter.get().libP(priority, obj, throwable = throwable)
         }
     }
     
-    private fun syncRecordBySys(
-        callRecord: CallRecord,
-        systemCallRecord: SystemCallRecord
-    ) {
-        printLog(Log.DEBUG, "syncRecordBySys: ${callRecord.isFake} -> $systemCallRecord")
-        // TelephonyCenter.get().libD("syncRecordBySys: ${callRecord.isFake} -> $systemCallRecord")
-        val originStartTime = max(callRecord.callStartTime, callRecord.callOffHookTime)
-        callRecord.callLogId = systemCallRecord.callId
-        callRecord.callStartTime = systemCallRecord.date
-        callRecord.callOffHookTime = callRecord.callStartTime
-        callRecord.duration = systemCallRecord.duration
-        callRecord.callState = systemCallRecord.type
-        callRecord.phoneAccountId = systemCallRecord.phoneAccountId
-        callRecord.recalculateEndTime(systemCallRecord)
-        if(callRecord.isFake && systemCallRecord.phoneNumber.isNotEmpty()) {
-            delete<FakeCallRecord> { equalTo("recordId", callRecord.recordId) }
-            callRecord.isFake = false
-            callRecord.phoneNumber = systemCallRecord.phoneNumber
+    private fun syncRecordBySys(mappingRecords: Map<SystemCallRecord, CallRecord>) {
+        if(mappingRecords.isEmpty()) {
+            printLog(Log.ERROR, "syncRecordBySys: mappingRecords is empty!")
+            return
         }
-        callRecord.synced = true
-        if(isManualSync) {
-            callRecord.isManualSynced = true
+        mappingRecords.forEach { mr ->
+            val systemCallRecord = mr.key
+            val callRecord = mr.value
+            printLog(Log.DEBUG, "syncRecordBySys: $systemCallRecord")
+            val originStartTime = max(callRecord.callStartTime, callRecord.callOffHookTime)
+            callRecord.callLogId = systemCallRecord.callId
+            callRecord.callStartTime = systemCallRecord.date
+            callRecord.duration = systemCallRecord.duration
+            callRecord.callState = systemCallRecord.type
+            callRecord.phoneAccountId = systemCallRecord.phoneAccountId
+            callRecord.recalculateTime()
+            callRecord.synced = true
+            if(isManualSync) {
+                callRecord.isManualSynced = true
+            }
+            
+            callRecord.recalculateDuration(originStartTime, systemCallRecord)
+            
+            callRecord.isDeleted = false
+            callRecord.isNoMapping = false
         }
-        
-        callRecord.recalculateDuration(originStartTime, systemCallRecord)
-        
-        callRecord.isDeleted = false
-        callRecord.isNoMapping = false
-        
-        callRecord.save()
-        
-        RecordSyncNotifier.get().notifyRecordSyncStatus(arrayListOf(callRecord))
+        val callRecords = mappingRecords.values.toList()
+        callRecords.saveAll()
+        RecordSyncNotifier.get().notifyRecordSyncStatus(callRecords)
     }
     
     override fun onDestroy() {
-        // TelephonyCenter.get().libW("All sync job is complete!")
         printLog(Log.WARN, "All sync job is complete!")
         printEnd()
         super.onDestroy()
