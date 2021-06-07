@@ -13,7 +13,7 @@ import com.yh.krealmextensions.save
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
-import com.yh.recordlib.ext.findRecordById
+import com.yh.recordlib.ext.findRecordByIdNotNull
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.media.MediaRecordHelper
@@ -89,7 +89,7 @@ class RecordCallService : Service() {
                     mCurrentState = state
                     TelephonyCenter.get().libD("IDLE 1: $mLastRecordId")
                     if(EMPTY_RECORD_ID != mLastRecordId) {
-                        findRecordById(mLastRecordId) { cr ->
+                        findRecordByIdNotNull(mLastRecordId) { cr ->
                             TelephonyCenter.get().libD("IDLE 2: $cr")
                             cr.callEndTime = System.currentTimeMillis()
                             cr.save()
@@ -109,7 +109,7 @@ class RecordCallService : Service() {
                     //呼入开始
                     mCurrentState = state
                     if(EMPTY_RECORD_ID != mLastRecordId) {
-                        findRecordById(mLastRecordId) { cr ->
+                        findRecordByIdNotNull(mLastRecordId) { cr ->
                             cr.callStartTime = System.currentTimeMillis()
                             cr.save()
                             MediaRecordHelper.get(application).startRecord(cr)
@@ -124,7 +124,7 @@ class RecordCallService : Service() {
                     //呼出开始
                     mCurrentState = state
                     if(EMPTY_RECORD_ID != mLastRecordId) {
-                        findRecordById(mLastRecordId) { cr ->
+                        findRecordByIdNotNull(mLastRecordId) { cr ->
                             cr.callOffHookTime = System.currentTimeMillis()
                             cr.save()
                             MediaRecordHelper.get(application).startRecord(cr)
@@ -136,7 +136,7 @@ class RecordCallService : Service() {
                     //呼入接听
                     mCurrentState = state
                     if(EMPTY_RECORD_ID != mLastRecordId) {
-                        findRecordById(mLastRecordId) { cr ->
+                        findRecordByIdNotNull(mLastRecordId) { cr ->
                             cr.callOffHookTime = System.currentTimeMillis()
                             cr.save()
                             MediaRecordHelper.get(application).startRecord(cr)

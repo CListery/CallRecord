@@ -14,6 +14,14 @@ fun findRecordById(recordId: String, callback: (CallRecord?) -> Unit) {
     }, "callStartTime", Sort.DESCENDING, { equalTo("recordId", recordId) })
 }
 
+fun findRecordByIdNotNull(recordId: String, callback: (CallRecord) -> Unit) {
+    querySortedAsync<CallRecord>({
+        if(it.isNotEmpty()) {
+            callback.invoke(it.first())
+        }
+    }, "callStartTime", Sort.DESCENDING, { equalTo("recordId", recordId) })
+}
+
 fun findAllUnSyncRecords(callback: (List<CallRecord>) -> Unit) {
     querySortedAsync<CallRecord>({
         callback.invoke(it)

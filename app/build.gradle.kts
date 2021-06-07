@@ -27,6 +27,9 @@ android {
         targetSdkVersion(AppConfig.targetSdk)
         versionCode(AppConfig.versionCode)
         versionName(AppConfig.versionName)
+    
+        testInstrumentationRunner("androidx.test.runner.AndroidJUnitRunner")
+        multiDexEnabled = true
         
         buildConfigField("String", "CALL_RECORD_DB", "\"CallRecord\"")
         buildConfigField("long", "RECORD_DB_VERSION", "1")
@@ -51,4 +54,9 @@ dependencies {
     implementation(project(mapOf("path" to ":lib_record")))
     //    implementation "com.clistery.app:callrecord:1.3.10"
     
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.multidex:multidex:2.0.1")
+    androidTestImplementation("com.android.support.test:runner:1.0.2")
+    androidTestImplementation("com.android.support.test:rules:1.0.2")
+    androidTestImplementation("com.google.truth:truth:0.42")
 }
