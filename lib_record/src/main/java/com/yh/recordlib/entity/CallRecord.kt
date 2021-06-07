@@ -2,6 +2,7 @@ package com.yh.recordlib.entity
 
 import com.yh.appinject.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
+import com.yh.recordlib.utils.toDate
 import io.realm.RealmObject
 import io.realm.annotations.PrimaryKey
 import io.realm.annotations.RealmClass
@@ -276,11 +277,7 @@ open class CallRecord : RealmObject {
         return true
     }
     
-    fun getFormatDate(): String {
-        return SimpleDateFormat("yyyy.M.d HH:mm", Locale.CHINESE).format(callStartTime)
-    }
-    
     override fun toString(): String {
-        return "CallRecord(recordId='$recordId', phoneNumber='$phoneNumber', callStartTime=$callStartTime, callOffHookTime=$callOffHookTime, callEndTime=$callEndTime, callType=$callType, audioFilePath=$audioFilePath, synced=$synced, callLogId=$callLogId, duration=$duration, needRecalculated=$needRecalculated, recalculated=$recalculated, callState=$callState, phoneAccountId=$phoneAccountId, mccMnc=$mccMnc, isNoMapping=$isNoMapping, isDeleted=$isDeleted, isManualSynced=$isManualSynced, hasChinaTELECOM=$hasChinaTELECOM)"
+        return "CallRecord(recordId='$recordId', phoneNumber='$phoneNumber', callStartTime=${callStartTime.toDate}, callOffHookTime=${callOffHookTime.toDate}, callEndTime=${callEndTime.toDate}, callType=$callType, audioFilePath=$audioFilePath, synced=$synced, callLogId=$callLogId, duration=$duration, needRecalculated=$needRecalculated, recalculated=$recalculated, callState=$callState, phoneAccountId=$phoneAccountId, mccMnc=$mccMnc, isNoMapping=$isNoMapping, isDeleted=$isDeleted, isManualSynced=$isManualSynced, hasChinaTELECOM=$hasChinaTELECOM)"
     }
 }

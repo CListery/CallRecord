@@ -25,6 +25,7 @@ import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.service.RecordCallService
 import com.yh.recordlib.service.SyncCallService
 import java.io.File
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -135,7 +136,7 @@ class MainAct : Activity(),
                     findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
                     findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber"
                     findViewById<TextView>(R.id.mDurationTxt).text = "Duration: $duration"
-                    findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${getFormatDate()}"
+                    findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${SimpleDateFormat("yyyy.M.d HH:mm", Locale.CHINESE).format(callStartTime)}"
                     findViewById<TextView>(R.id.mSyncTxt).text = "Synced: $synced"
                     findViewById<TextView>(R.id.mSubIdTxt).text = "SubId: $phoneAccountId\nMccMnc: $mccMnc"
                 }

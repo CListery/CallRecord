@@ -1,5 +1,6 @@
 package com.yh.recordlib.entity
 
+import com.yh.recordlib.utils.toDate
 import io.realm.RealmObject
 import io.realm.annotations.RealmClass
 
@@ -36,7 +37,7 @@ open class SystemCallRecord : RealmObject, Comparable<SystemCallRecord> {
     }
     
     override fun toString(): String {
-        return "SystemCallRecord(callId=$callId, date=$date, duration=$duration, type=$type, phoneAccountId=$phoneAccountId, phoneNumber='$phoneNumber')"
+        return "SystemCallRecord(callId=$callId, date=${date.toDate}, duration=$duration, type=$type, phoneAccountId=$phoneAccountId, phoneNumber='$phoneNumber')"
     }
     
     override fun compareTo(other: SystemCallRecord): Int {
