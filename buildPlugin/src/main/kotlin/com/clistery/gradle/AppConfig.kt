@@ -1,8 +1,8 @@
 package com.clistery.gradle
 
 object AppConfig {
-    const val compileSdk = 28
-    const val buildToolsVersion = "28.0.3"
+    const val compileSdk = 30
+    const val buildToolsVersion = "30.0.3"
     const val minSdk = 19
     const val targetSdk = 28
     
