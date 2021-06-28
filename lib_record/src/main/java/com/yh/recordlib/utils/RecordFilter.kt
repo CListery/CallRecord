@@ -31,8 +31,7 @@ object RecordFilter {
                         if(sr.phoneNumber != cr.phoneNumber) {
                             return@sys
                         }
-                        val callStartTime = max(cr.callStartTime, cr.callOffHookTime)
-                        val startTimeOffset = sr.date - callStartTime
+                        val startTimeOffset = sr.date - cr.callStartTime
                         if(startTimeOffset >= 0 && startTimeOffset < TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset) {
                             if(startTimeOffset < minStartTimeOffset) {
                                 if(cr.callEndTime <= 0) {
