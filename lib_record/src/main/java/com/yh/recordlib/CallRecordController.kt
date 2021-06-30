@@ -107,7 +107,7 @@ class CallRecordController private constructor(
         }
         
         if(needInitSync) {
-            mHandler.postDelayed({ SyncCallService.enqueueWork(application) }, 2000)
+            mHandler.postDelayed({ SyncCallService.enqueueWorkById(application) }, 2000)
         }
         TelephonyCenter.get().libW("setupConfig done!")
     }

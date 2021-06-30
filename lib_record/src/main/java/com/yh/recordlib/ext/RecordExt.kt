@@ -1,37 +1,23 @@
 package com.yh.recordlib.ext
 
 import com.yh.appinject.logger.ext.libD
-import com.yh.krealmextensions.querySortedAsync
+import com.yh.krealmextensions.querySorted
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
-import com.yh.recordlib.service.RecordCallService
 import io.realm.Sort
 
 /**
  * Created by CYH on 2019-05-30 14:20
  */
 
-fun findRecordById(recordId: String, callback: (CallRecord?) -> Unit) {
-    querySortedAsync<CallRecord>({
-        TelephonyCenter.get().libD("findRecordById: ${it.size}")
-        callback.invoke(it.firstOrNull())
-    }, "callStartTime", Sort.DESCENDING, { equalTo("recordId", recordId) })
+fun findRecordById(recordId: String): CallRecord? {
+    val results = querySorted<CallRecord>("callStartTime", Sort.DESCENDING) { equalTo("recordId", recordId) }
+    TelephonyCenter.get().libD("findRecordById: ${results.size}")
+    return results.firstOrNull()
 }
 
-fun findRecordByIdNotNull(recordId: String, callback: (CallRecord) -> Unit) {
-    querySortedAsync<CallRecord>({
-        TelephonyCenter.get().libD("findRecordByIdNotNull: ${it.size}")
-        if(it.isNotEmpty()) {
-            callback.invoke(it.first())
-        }
-    }, "callStartTime", Sort.DESCENDING, { equalTo("recordId", recordId) })
-}
-
-fun findAllUnSyncRecords(syncTimeOffset: Long, callback: (List<CallRecord>) -> Unit) {
-    querySortedAsync<CallRecord>({
-        TelephonyCenter.get().libD("findAllUnSyncRecords: ${it.size}")
-        callback.invoke(it)
-    }, "callStartTime", Sort.DESCENDING, {
+fun findAllUnSyncRecords(syncTimeOffset: Long): List<CallRecord> {
+    val results = querySorted<CallRecord>("callStartTime", Sort.DESCENDING) {
         if(syncTimeOffset != Long.MAX_VALUE) {
             val date = System.currentTimeMillis()
             if(date > syncTimeOffset) {
@@ -40,12 +26,7 @@ fun findAllUnSyncRecords(syncTimeOffset: Long, callback: (List<CallRecord>) -> U
         }
         equalTo("synced", false)
         equalTo("isDeleted", false)
-    })
-}
-
-fun queryLastRecord(callback: (CallRecord?) -> Unit) {
-    querySortedAsync<CallRecord>({
-        TelephonyCenter.get().libD("queryLastRecord: ${it.size}")
-        callback.invoke(it.firstOrNull())
-    }, "callStartTime", Sort.DESCENDING)
+    }
+    TelephonyCenter.get().libD("findAllUnSyncRecords: ${results.size}")
+    return results
 }

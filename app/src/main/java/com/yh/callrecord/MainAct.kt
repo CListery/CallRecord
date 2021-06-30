@@ -11,6 +11,7 @@ import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.logD
 import com.yh.appinject.logger.logE
 import com.yh.appinject.logger.logW
+import com.yh.krealmextensions.querySortedAsync
 import com.yh.krealmextensions.save
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.IManualSyncCallback
@@ -19,11 +20,11 @@ import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
-import com.yh.recordlib.ext.queryLastRecord
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.service.RecordCallService
 import com.yh.recordlib.service.SyncCallService
+import io.realm.Sort
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -112,7 +113,7 @@ class MainAct : Activity(),
         mLinker.bind()
         
         findViewById<View>(R.id.mSyncBtn)?.setOnClickListener {
-            SyncCallService.enqueueWork(application)
+            SyncCallService.enqueueWorkById(application)
         }
         findViewById<View>(R.id.mCallBtn)?.setOnClickListener {
             TelephonyCenter.get()
@@ -131,8 +132,10 @@ class MainAct : Activity(),
             TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(2)}")
         }
         findViewById<View>(R.id.mGetLastRecord)?.setOnClickListener {
-            queryLastRecord {
-                it?.apply {
+            querySortedAsync<CallRecord>({
+                logD("queryLastRecord: ${it.size}")
+                val lastCR = it.firstOrNull()
+                lastCR?.apply {
                     findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
                     findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber"
                     findViewById<TextView>(R.id.mDurationTxt).text = "Duration: $duration"
@@ -143,7 +146,7 @@ class MainAct : Activity(),
                     ?: apply {
                         findViewById<View>(R.id.mRecordLayout).visibility = View.GONE
                     }
-            }
+            }, "callStartTime", Sort.DESCENDING)
         }
         findViewById<View>(R.id.mManualSync)?.setOnClickListener {
             CallRecordController.get().registerRecordSyncListener(mManualSyncListener)
