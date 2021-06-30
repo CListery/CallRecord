@@ -6,7 +6,7 @@ object AppVersion {
 
     object clistery{
         const val appinject = "1.3.6.2"
-        const val kotlin_realm_ext = "3.0.7"
+        const val kotlin_realm_ext = "3.0.8"
     }
 
     object kotlin {
