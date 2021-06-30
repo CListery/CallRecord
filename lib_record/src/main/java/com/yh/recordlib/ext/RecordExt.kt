@@ -27,11 +27,20 @@ fun findRecordByIdNotNull(recordId: String, callback: (CallRecord) -> Unit) {
     }, "callStartTime", Sort.DESCENDING, { equalTo("recordId", recordId) })
 }
 
-fun findAllUnSyncRecords(callback: (List<CallRecord>) -> Unit) {
+fun findAllUnSyncRecords(syncTimeOffset: Long, callback: (List<CallRecord>) -> Unit) {
     querySortedAsync<CallRecord>({
         TelephonyCenter.get().libD("findAllUnSyncRecords: ${it.size}")
         callback.invoke(it)
-    }, "callStartTime", Sort.DESCENDING, { equalTo("synced", false).and().equalTo("isDeleted", false) })
+    }, "callStartTime", Sort.DESCENDING, {
+        if(syncTimeOffset != Long.MAX_VALUE) {
+            val date = System.currentTimeMillis()
+            if(date > syncTimeOffset) {
+                between("callStartTime", date - syncTimeOffset, date)
+            }
+        }
+        equalTo("synced", false)
+        equalTo("isDeleted", false)
+    })
 }
 
 fun queryLastRecord(callback: (CallRecord?) -> Unit) {

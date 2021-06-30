@@ -20,10 +20,6 @@ import java.io.File
 
 /**
  * Created by CYH on 2019-06-21 16:39
- *
- * @param needInitSync Whether to perform full synchronization during initialization. Default: false
- * @param syncRetryTime Retry interval when the synchronous system's CallRecord data fails. Default: com.yh.recordlib.BuildConfig#CALL_RECORD_RETRY_TIME
- * @param maxRetryCount Max retry count. Default: 2
  */
 class CallRecordController private constructor(
     val application: Application,

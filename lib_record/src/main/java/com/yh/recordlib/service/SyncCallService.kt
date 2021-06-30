@@ -113,7 +113,7 @@ class SyncCallService : SafeJobIntentService() {
             return
         }
     
-        findAllUnSyncRecords { tmpUnSyncRecords ->
+        findAllUnSyncRecords(TelephonyCenter.get().getRecordConfigure().syncTimeOffset) { tmpUnSyncRecords ->
             TelephonyCenter.get().libD("syncAllRecord: tmpUnSyncRecords -> $tmpUnSyncRecords")
             if(tmpUnSyncRecords.isEmpty()){
                 return@findAllUnSyncRecords
