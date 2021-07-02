@@ -50,8 +50,11 @@ class SyncCallService : SafeJobIntentService() {
         const val SYNC_ALL_RECORD_ID = "sync_all_record_id"
         
         @JvmStatic
-        fun enqueueWorkById(context: Context, recordId: String = SYNC_ALL_RECORD_ID) {
+        fun enqueueWorkById(context: Context, recordId: String) {
             TelephonyCenter.get().libW("enqueueWorkById: $context - $recordId")
+            if(recordId.isEmpty()) {
+                throw IllegalArgumentException("recordId can not be EMPTY!!!")
+            }
             val work = Intent()
             work.putExtra(Constants.EXTRA_LAST_RECORD_ID, recordId)
             enqueueWork(context, work)
@@ -60,6 +63,10 @@ class SyncCallService : SafeJobIntentService() {
         @JvmStatic
         fun enqueueWork(context: Context, work: Intent) {
             TelephonyCenter.get().libW("enqueueWork: $context - $work")
+            val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
+            if(recordId.isNullOrEmpty()) {
+                throw IllegalArgumentException("recordId can not be EMPTY!!!")
+            }
             enqueueWork(context, SyncCallService::class.java, JOB_ID, work)
         }
     }

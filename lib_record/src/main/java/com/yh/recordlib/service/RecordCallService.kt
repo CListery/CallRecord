@@ -95,7 +95,7 @@ class RecordCallService : Service() {
                         if(null != cr) {
                             cr.callEndTime = System.currentTimeMillis()
                             cr.save()
-                            SyncCallService.enqueueWorkById(applicationContext, mLastRecordId)
+                            SyncCallService.enqueueWorkById(applicationContext, cr.recordId)
                             mRecordCallback?.onCallEnd(cr.recordId)
                         }
                         mRecordCallback = null

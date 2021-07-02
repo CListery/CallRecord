@@ -107,23 +107,22 @@ class CallRecordController private constructor(
         }
         
         if(needInitSync) {
-            mHandler.postDelayed({ SyncCallService.enqueueWorkById(application) }, 2000)
+            mHandler.postDelayed({ SyncCallService.enqueueWorkById(application, SyncCallService.SYNC_ALL_RECORD_ID) }, 2000)
         }
         TelephonyCenter.get().libW("setupConfig done!")
     }
     
     fun retry(work: Intent) {
         val retryCount = work.getIntExtra(Constants.EXTRA_RETRY, 0)
-        if(work.hasExtra(Constants.EXTRA_LAST_RECORD_ID)) {
-            TelephonyCenter.get()
-                .libW("Retry TARGET:${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)} -> $retryCount")
-        } else {
-            TelephonyCenter.get().libW("Retry ALL -> $retryCount")
-        }
         if(retryCount >= maxRetryCount) {
-            TelephonyCenter.get()
-                .libE("Can not retry sync this record ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)}")
+            TelephonyCenter.get().libE("Can not retry sync this record ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)}")
             return
+        }
+        val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
+        if(SyncCallService.SYNC_ALL_RECORD_ID == recordId) {
+            TelephonyCenter.get().libW("Retry ALL -> $retryCount")
+        } else {
+            TelephonyCenter.get().libW("Retry TARGET:${recordId} -> $retryCount")
         }
         work.putExtra(Constants.EXTRA_RETRY, retryCount.inc())
         mHandler.postDelayed({ SyncCallService.enqueueWork(application, work) }, syncRetryTime)

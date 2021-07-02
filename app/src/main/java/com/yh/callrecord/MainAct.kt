@@ -113,7 +113,7 @@ class MainAct : Activity(),
         mLinker.bind()
         
         findViewById<View>(R.id.mSyncBtn)?.setOnClickListener {
-            SyncCallService.enqueueWorkById(application)
+            SyncCallService.enqueueWorkById(application, SyncCallService.SYNC_ALL_RECORD_ID)
         }
         findViewById<View>(R.id.mCallBtn)?.setOnClickListener {
             TelephonyCenter.get()
