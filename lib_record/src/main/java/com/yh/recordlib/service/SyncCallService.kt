@@ -90,7 +90,8 @@ class SyncCallService : SafeJobIntentService() {
             manualSyncLogAdapter =
                 TheLogAdapter(logFormatStrategy).apply { setConfig(true to Log.VERBOSE) }
         }
-        if(work.hasExtra(Constants.EXTRA_RETRY)) {
+        val isRetry = work.hasExtra(Constants.EXTRA_RETRY)
+        if(isRetry) {
             printLog(Log.WARN, "onHandleWork >>RETRY<< : $work")
         }
         val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)!!
@@ -102,7 +103,7 @@ class SyncCallService : SafeJobIntentService() {
         if(SYNC_ALL_RECORD_ID == recordId) {
             syncAllRecord(work)
         } else {
-            syncTargetRecord(work, recordId)
+            syncTargetRecord(work, recordId, isRetry)
         }
     }
     
@@ -248,10 +249,19 @@ class SyncCallService : SafeJobIntentService() {
     /**
      * 同步指定的记录
      */
-    private fun syncTargetRecord(work: Intent, recordId: String) {
+    private fun syncTargetRecord(work: Intent, recordId: String, isRetry: Boolean) {
         val recordCall = findRecordById(recordId)
         printLog(Log.DEBUG, "syncTargetRecord: $recordCall")
         if(null == recordCall) {
+            return
+        }
+        if(recordCall.synced || recordCall.isDeleted){
+            printLog(
+                Log.WARN, "syncTargetRecord: $recordId has been"
+                    .plus(if(recordCall.synced) " synced " else "")
+                    .plus(if(recordCall.isDeleted) " deleted " else "")
+                    .plus(if(isRetry) ", and this work isRetry" else "")
+            )
             return
         }
         
