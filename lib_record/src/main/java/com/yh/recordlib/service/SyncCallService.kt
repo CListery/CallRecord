@@ -94,13 +94,13 @@ class SyncCallService : SafeJobIntentService() {
         if(isRetry) {
             printLog(Log.WARN, "onHandleWork >>RETRY<< : $work")
         }
-        val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)!!
+        val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
         printLog(Log.WARN, "onHandleWork: id:$recordId, manual:$isManualSync")
         if(!hasCallLogPermission()) {
             printLog(Log.ERROR, "No permission operator call_log!")
             return
         }
-        if(SYNC_ALL_RECORD_ID == recordId) {
+        if(recordId.isNullOrEmpty() || SYNC_ALL_RECORD_ID == recordId) {
             syncAllRecord(work)
         } else {
             syncTargetRecord(work, recordId, isRetry)
