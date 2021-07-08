@@ -11,6 +11,7 @@ import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.db.DefCallRecordDBMigration
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.RecordRealmModule
+import com.yh.recordlib.ext.findRecordById
 import com.yh.recordlib.notifier.RecordSyncNotifier
 import com.yh.recordlib.service.SyncCallService
 import io.realm.Realm
@@ -112,20 +113,32 @@ class CallRecordController private constructor(
         TelephonyCenter.get().libW("setupConfig done!")
     }
     
-    fun retry(work: Intent) {
-        val retryCount = work.getIntExtra(Constants.EXTRA_RETRY, 0)
-        if(retryCount >= maxRetryCount) {
-            TelephonyCenter.get().libE("Can not retry sync this record ${work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)}")
-            return
-        }
+    fun retry(work: Intent, delayMillis: Long = syncRetryTime) {
         val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
-        if(SyncCallService.SYNC_ALL_RECORD_ID == recordId) {
-            TelephonyCenter.get().libW("Retry ALL -> $retryCount")
+        if(recordId.isNullOrEmpty() || SyncCallService.SYNC_ALL_RECORD_ID == recordId) {
+            TelephonyCenter.get().libE("Can not retry sync this record $recordId, record id is invalid")
+            return
         } else {
-            TelephonyCenter.get().libW("Retry TARGET:${recordId} -> $retryCount")
+            val callRecord = findRecordById(recordId)
+            if(null == callRecord) {
+                TelephonyCenter.get().libE("Can not retry sync this record $recordId, not found record")
+                return
+            }
+            if(callRecord.isDeleted) {
+                TelephonyCenter.get().libE("Can not retry sync this record $recordId, has been deleted")
+                return
+            }
+            if(callRecord.synced) {
+                TelephonyCenter.get().libE("Can not retry sync this record $recordId, has been synced")
+                return
+            }
+            if(callRecord.syncCount > maxRetryCount) {
+                TelephonyCenter.get().libE("Can not retry sync this record $recordId, re-sync count has exceeded the maximum $maxRetryCount")
+                return
+            }
+            TelephonyCenter.get().libW("Retry TARGET:${recordId} -> ${callRecord.syncCount}")
         }
-        work.putExtra(Constants.EXTRA_RETRY, retryCount.inc())
-        mHandler.postDelayed({ SyncCallService.enqueueWork(application, work) }, syncRetryTime)
+        mHandler.postDelayed({ SyncCallService.enqueueWork(application, work) }, delayMillis)
     }
     
     fun registerRecordSyncListener(iSyncCallback: ISyncCallback) {

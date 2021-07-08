@@ -33,7 +33,7 @@ android {
         versionCode(AppConfig.versionCode)
         versionName(AppConfig.versionName)
         
-        buildConfigField("long", "RECORD_DB_VERSION", "4")
+        buildConfigField("long", "RECORD_DB_VERSION", "5")
         buildConfigField("String", "CALL_RECORD_DB", "\"call_record.realm\"")
         buildConfigField("long", "CALL_RECORD_RETRY_TIME", "5000")
         buildConfigField("long", "MAX_CALL_TIME_OFFSET", "60000")

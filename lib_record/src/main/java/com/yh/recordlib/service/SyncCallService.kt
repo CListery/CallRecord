@@ -20,10 +20,10 @@ import com.yh.appinject.logger.ext.libP
 import com.yh.appinject.logger.ext.libW
 import com.yh.appinject.logger.impl.TheLogAdapter
 import com.yh.krealmextensions.saveAll
+import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.CallRecordController
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.cons.Constants
-import com.yh.recordlib.db.DefCallRecordDBMigration
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.SystemCallRecord
 import com.yh.recordlib.ext.findAllUnSyncRecords
@@ -50,14 +50,19 @@ class SyncCallService : SafeJobIntentService() {
         const val SYNC_ALL_RECORD_ID = "sync_all_record_id"
         
         @JvmStatic
+        fun makeSyncWork(recordId: String): Intent {
+            val work = Intent()
+            work.putExtra(Constants.EXTRA_LAST_RECORD_ID, recordId)
+            return work
+        }
+        
+        @JvmStatic
         fun enqueueWorkById(context: Context, recordId: String) {
             TelephonyCenter.get().libW("enqueueWorkById: $context - $recordId")
             if(recordId.isEmpty()) {
                 throw IllegalArgumentException("recordId can not be EMPTY!!!")
             }
-            val work = Intent()
-            work.putExtra(Constants.EXTRA_LAST_RECORD_ID, recordId)
-            enqueueWork(context, work)
+            enqueueWork(context, makeSyncWork(recordId))
         }
         
         @JvmStatic
@@ -90,10 +95,6 @@ class SyncCallService : SafeJobIntentService() {
             manualSyncLogAdapter =
                 TheLogAdapter(logFormatStrategy).apply { setConfig(true to Log.VERBOSE) }
         }
-        val isRetry = work.hasExtra(Constants.EXTRA_RETRY)
-        if(isRetry) {
-            printLog(Log.WARN, "onHandleWork >>RETRY<< : $work")
-        }
         val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
         printLog(Log.WARN, "onHandleWork: id:$recordId, manual:$isManualSync")
         if(!hasCallLogPermission()) {
@@ -101,10 +102,12 @@ class SyncCallService : SafeJobIntentService() {
             return
         }
         if(recordId.isNullOrEmpty() || SYNC_ALL_RECORD_ID == recordId) {
-            syncAllRecord(work)
+            syncAllRecord()
         } else {
-            syncTargetRecord(work, recordId, isRetry)
+            syncTargetRecord(work, recordId)
         }
+        printLog(Log.WARN, "All sync job is complete!")
+        printEnd()
     }
     
     private fun hasCallLogPermission(): Boolean {
@@ -114,20 +117,18 @@ class SyncCallService : SafeJobIntentService() {
         )
     }
     
-    private fun syncAllRecord(work: Intent) {
+    private fun syncAllRecord() {
         val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
         if(null == callLogClient) {
             TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
             return
         }
         
-        val tmpUnSyncRecords = findAllUnSyncRecords(TelephonyCenter.get().getRecordConfigure().syncTimeOffset)
-        TelephonyCenter.get().libD("syncAllRecord: tmpUnSyncRecords -> $tmpUnSyncRecords")
-        if(tmpUnSyncRecords.isEmpty()) {
+        val allUnSyncRecords = findAllUnSyncRecords(TelephonyCenter.get().getRecordConfigure().syncTimeOffset)
+        TelephonyCenter.get().libD("syncAllRecord: allUnSyncRecords -> $allUnSyncRecords")
+        if(allUnSyncRecords.isEmpty()) {
             return
         }
-        
-        var allUnSyncRecords: List<CallRecord> = ArrayList(tmpUnSyncRecords)
         
         var firstCallStartTime: Long = System.currentTimeMillis()
         var lastCallEndTime = 0L
@@ -185,7 +186,7 @@ class SyncCallService : SafeJobIntentService() {
                 if(systemRecords.isNotEmpty()) {
                     val recordMappingInfo = findMappingRecords(systemRecords, allUnSyncRecords)
                     
-                    allUnSyncRecords = recordMappingInfo.noMappingRecords
+                    val finalAllUnSyncRecords = recordMappingInfo.noMappingRecords
                     
                     if(recordMappingInfo.unUseSystemCallRecords.isNotEmpty()) {
                         TelephonyCenter.get().libW("syncAllRecord: Ignored Sys records: ${recordMappingInfo.unUseSystemCallRecords}")
@@ -196,30 +197,26 @@ class SyncCallService : SafeJobIntentService() {
                         syncRecordBySys(recordMappingInfo.mappingRecords)
                     }
                     
-                    if(allUnSyncRecords.isNotEmpty()) {
-                        TelephonyCenter.get().libE("syncAllRecord: Failed to sync successfully: $allUnSyncRecords")
-                        markNoMappingRecord(allUnSyncRecords)
-                        CallRecordController.get().retry(work)
+                    if(finalAllUnSyncRecords.isNotEmpty()) {
+                        TelephonyCenter.get().libE("syncAllRecord: Failed to sync successfully: $finalAllUnSyncRecords")
+                        markUnSyncAndRetry(finalAllUnSyncRecords)
                     }
                 } else {
                     if(allUnSyncRecords.isNotEmpty()) {
                         TelephonyCenter.get().libE("syncAllRecord: Not found sys mapping record!!")
-                        markNoMappingRecord(allUnSyncRecords)
-                        CallRecordController.get().retry(work)
+                        markUnSyncAndRetry(allUnSyncRecords)
                     }
                 }
             }, failAction = {
                 if(allUnSyncRecords.isNotEmpty()) {
                     TelephonyCenter.get().libE("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!")
-                    markNoMappingRecord(allUnSyncRecords)
-                    CallRecordController.get().retry(work)
+                    markUnSyncAndRetry(allUnSyncRecords)
                 }
             })
         } catch(e: Exception) {
             if(allUnSyncRecords.isNotEmpty()) {
                 TelephonyCenter.get().libE("syncAllRecord", throwable = e)
-                markNoMappingRecord(allUnSyncRecords)
-                CallRecordController.get().retry(work)
+                markUnSyncAndRetry(allUnSyncRecords)
             }
         } finally {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -230,37 +227,22 @@ class SyncCallService : SafeJobIntentService() {
         }
     }
     
-    private fun markNoMappingRecord(allUnSyncRecords: List<CallRecord>) {
-        allUnSyncRecords.forEach {
-            if(isManualSync) {
-                it.isManualSynced = true
-            }
-            if(it.isManualSynced && System.currentTimeMillis() - it.callStartTime > 7200000) {
-                //已经手动同步过，且2小时未能成功同步,标记为删除状态
-                it.isDeleted = true
-            }
-            it.isNoMapping = true
-        }
-        val callRecords = allUnSyncRecords.toList()
-        callRecords.saveAll()
-        RecordSyncNotifier.get().notifyRecordSyncStatus(callRecords)
-    }
-    
     /**
      * 同步指定的记录
      */
-    private fun syncTargetRecord(work: Intent, recordId: String, isRetry: Boolean) {
+    private fun syncTargetRecord(work: Intent, recordId: String) {
         val recordCall = findRecordById(recordId)
         printLog(Log.DEBUG, "syncTargetRecord: $recordCall")
         if(null == recordCall) {
             return
         }
-        if(recordCall.synced || recordCall.isDeleted){
+        if(recordCall.synced || (!isManualSync && recordCall.isDeleted)) {
             printLog(
                 Log.WARN, "syncTargetRecord: $recordId has been"
                     .plus(if(recordCall.synced) " synced " else "")
+                    .plus(if(isManualSync) " manual " else "")
                     .plus(if(recordCall.isDeleted) " deleted " else "")
-                    .plus(if(isRetry) ", and this work isRetry" else "")
+                    .plus(", sync count: ${recordCall.syncCount}")
             )
             return
         }
@@ -411,14 +393,12 @@ class SyncCallService : SafeJobIntentService() {
         selection.append("AND")
         selection.append(" ")
         selection.append("?")
-        
-        val callStartTime = recordCall.callStartTime.minus(
-            600000
-        )
+    
+        val callStartTime = recordCall.callStartTime.minus(600000)
         val callEndTime = if(recordCall.callEndTime <= 0L) {
             callStartTime + 1800000
         } else {
-            recordCall.callEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset)
+            recordCall.callEndTime.plus(600000)
         }
         
         val args: ArrayList<String> = arrayListOf(
@@ -476,17 +456,17 @@ class SyncCallService : SafeJobIntentService() {
             printLog(Log.INFO, "|| DB_DIR: ${configure.dbFileDirName.invoke()}")
             printLog(
                 Log.INFO,
-                "|| DB_VER_LIB: ${DefCallRecordDBMigration.getVersions(configure.dbVersion).first}"
+                "|| DB_VER_LIB: ${BuildConfig.RECORD_DB_VERSION}"
             )
             printLog(
                 Log.INFO,
-                "|| DB_VER_APP: ${DefCallRecordDBMigration.getVersions(configure.dbVersion).second}"
+                "|| DB_VER_APP: ${configure.dbVersion}"
             )
-            printLog(Log.INFO, "|| SRT: ${(configure.syncRetryTime / 1000)}s")
-            printLog(Log.INFO, "|| MRC: ${configure.maxRetryCount}")
+            printLog(Log.INFO, "|| SYNC_RETRY_TIME: ${(configure.syncRetryTime / 1000)}s")
+            printLog(Log.INFO, "|| MAX_RETRY_COUNT: ${configure.maxRetryCount}")
+            printLog(Log.INFO, "|| START_OFFSET: ${(configure.startTimeOffset / 1000)}s")
             printLog(Log.INFO, "|| MAX_OFFSET: ${(configure.maxCallTimeOffset / 1000)}s")
             printLog(Log.INFO, "|| MIN_OFFSET: ${(configure.minCallTimeOffset / 1000)}s")
-            printLog(Log.INFO, "|| START_OFFSET: ${(configure.startTimeOffset / 1000)}s")
         } catch(e: Exception) {
             printLog(Log.ERROR, "printConfigInfo", throwable = e)
         }
@@ -496,8 +476,8 @@ class SyncCallService : SafeJobIntentService() {
     private fun printMobileInfo() {
         printLog(Log.INFO, "==============[START MOBILE INFO]==============")
         try {
-            printLog(Log.INFO, "|| ASO: ${TelephonyCenter.get().getAllSimOperator()}")
-            printLog(Log.INFO, "|| MSC: ${TelephonyCenter.get().getMultiSimConfiguration().name}")
+            printLog(Log.INFO, "|| ALL_OPERATOR: ${TelephonyCenter.get().getAllSimOperator()}")
+            printLog(Log.INFO, "|| MULTI_CONFIG: ${TelephonyCenter.get().getMultiSimConfiguration().name}")
             printLog(Log.INFO, "|| PN0: ${TelephonyCenter.get().getPhoneNumber()}")
             printLog(Log.INFO, "|| PN1: ${TelephonyCenter.get().getPhoneNumber(1)}")
             printLog(Log.INFO, "|| PN2: ${TelephonyCenter.get().getPhoneNumber(2)}")
@@ -513,6 +493,13 @@ class SyncCallService : SafeJobIntentService() {
     private fun printDeviceInfo() {
         printLog(Log.INFO, "==============[START DEVICE INFO]==============")
         try {
+            printLog(Log.INFO, "|| MANUFACTURER: ${Build.MANUFACTURER}")
+            printLog(Log.INFO, "|| DEVICE: ${Build.DEVICE}")
+            printLog(Log.INFO, "|| PRODUCT: ${Build.PRODUCT}")
+            printLog(Log.INFO, "|| MODEL: ${Build.MODEL}")
+            printLog(Log.INFO, "|| HARDWARE: ${Build.HARDWARE}")
+            printLog(Log.INFO, "|| RELEASE: ${Build.VERSION.RELEASE}")
+            printLog(Log.INFO, "|| ROOTED: ${DeviceUtils.isDeviceRooted()}")
             DeviceUtils.getMemoryInfo().forEach {
                 printLog(Log.INFO, "|| $it")
             }
@@ -553,6 +540,30 @@ class SyncCallService : SafeJobIntentService() {
         }
     }
     
+    private fun markUnSyncAndRetry(finalAllUnSyncRecords: List<CallRecord>) {
+        markNoMappingRecord(finalAllUnSyncRecords)
+        finalAllUnSyncRecords.map { makeSyncWork(it.recordId) }.forEachIndexed { index, work ->
+            CallRecordController.get().retry(work, CallRecordController.get().syncRetryTime + (index * 200))
+        }
+    }
+    
+    private fun markNoMappingRecord(allUnSyncRecords: List<CallRecord>) {
+        allUnSyncRecords.forEach {
+            it.syncCount++
+            if(isManualSync) {
+                it.isManualSynced = true
+            }
+            if(it.isManualSynced && System.currentTimeMillis() - it.callStartTime > 7200000) {
+                //已经手动同步过，且2小时未能成功同步,标记为删除状态
+                it.isDeleted = true
+            }
+            it.isNoMapping = true
+        }
+        val callRecords = allUnSyncRecords.toList()
+        callRecords.saveAll()
+        RecordSyncNotifier.get().notifyRecordSyncStatus(callRecords)
+    }
+    
     private fun syncRecordBySys(mappingRecords: Map<SystemCallRecord, CallRecord>) {
         if(mappingRecords.isEmpty()) {
             printLog(Log.ERROR, "syncRecordBySys: mappingRecords is empty!")
@@ -563,6 +574,7 @@ class SyncCallService : SafeJobIntentService() {
             val callRecord = mr.value
             printLog(Log.DEBUG, "syncRecordBySys: $systemCallRecord")
             val originStartTime = max(callRecord.callStartTime, callRecord.callOffHookTime)
+            callRecord.syncCount++
             callRecord.callLogId = systemCallRecord.callId
             callRecord.callStartTime = systemCallRecord.date
             callRecord.duration = systemCallRecord.duration
@@ -584,9 +596,4 @@ class SyncCallService : SafeJobIntentService() {
         RecordSyncNotifier.get().notifyRecordSyncStatus(callRecords)
     }
     
-    override fun onDestroy() {
-        printLog(Log.WARN, "All sync job is complete!")
-        printEnd()
-        super.onDestroy()
-    }
 }

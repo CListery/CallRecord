@@ -135,6 +135,7 @@ class MainAct : Activity(),
             querySortedAsync<CallRecord>({
                 logD("queryLastRecord: ${it.size}")
                 val lastCR = it.firstOrNull()
+                logD("queryLastRecord: $lastCR")
                 lastCR?.apply {
                     findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
                     findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber"

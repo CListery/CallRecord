@@ -81,6 +81,11 @@ class DefCallRecordDBMigration(private val realmMigration: RealmMigration?) : Re
             schema.get("CallRecord")?.removeField("isFake")
             oldMainVersion++
         }
+        if(4L == oldMainVersion){
+            schema.get("CallRecord")?.addField("syncCount", Int::class.java, FieldAttribute.REQUIRED)?.transform {
+                it.set("syncCount", 0)
+            }
+        }
         if(oldVersions.second < newVersions.second) {
             realmMigration?.migrate(realm, oldVersions.second, newVersions.second)
         }

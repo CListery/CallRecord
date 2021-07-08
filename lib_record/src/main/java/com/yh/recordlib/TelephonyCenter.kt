@@ -427,41 +427,44 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
      *
      * @param phoneId whose phone number for line 1 is returned
      */
-    @Throws(Exception::class)
     fun getPhoneNumber(phoneId: Int = 0): String {
-        val subscriptionId = getValidPhoneIdBySubid(phoneId)
-        return when {
-            Build.VERSION.SDK_INT >= 28 -> {
-                val clazz = TelephonyManager::class.java
-                val method = clazz.getDeclaredMethod("getLine1Number", Int::class.java)
-                method.isAccessible = true
-                val result = method.invoke(mTM, subscriptionId)
-                result as? String ?: ""
+        try {
+            val subscriptionId = getValidPhoneIdBySubid(phoneId)
+            return when {
+                Build.VERSION.SDK_INT >= 28 -> {
+                    val clazz = TelephonyManager::class.java
+                    val method = clazz.getDeclaredMethod("getLine1Number", Int::class.java)
+                    method.isAccessible = true
+                    val result = method.invoke(mTM, subscriptionId)
+                    result as? String ?: ""
+                }
+    
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                    mIPhoneSubInfo?.getLine1NumberForSubscriber(
+                        subscriptionId, CallRecordController.get().application.packageName
+                    ) ?: ""
+                }
+    
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> {
+                    val clazz = IPhoneSubInfo::class.java
+                    val method = clazz.getDeclaredMethod(
+                        "getLine1NumberForSubscriber", Long::class.java
+                    )
+                    method.isAccessible = true
+                    val result = method.invoke(getSubscriberInfo(), subscriptionId)
+                    result as? String ?: ""
+                }
+    
+                else -> {
+                    val clazz = IPhoneSubInfo::class.java
+                    val method = clazz.getDeclaredMethod("getLine1Number")
+                    method.isAccessible = true
+                    val result = method.invoke(getSubscriberInfo())
+                    result as? String ?: ""
+                }
             }
-
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                mIPhoneSubInfo?.getLine1NumberForSubscriber(
-                    subscriptionId, CallRecordController.get().application.packageName
-                ) ?: ""
-            }
-
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> {
-                val clazz = IPhoneSubInfo::class.java
-                val method = clazz.getDeclaredMethod(
-                    "getLine1NumberForSubscriber", Long::class.java
-                )
-                method.isAccessible = true
-                val result = method.invoke(getSubscriberInfo(), subscriptionId)
-                result as? String ?: ""
-            }
-
-            else -> {
-                val clazz = IPhoneSubInfo::class.java
-                val method = clazz.getDeclaredMethod("getLine1Number")
-                method.isAccessible = true
-                val result = method.invoke(getSubscriberInfo())
-                result as? String ?: ""
-            }
+        } catch(e: Exception) {
+            return "unknown"
         }
     }
 
@@ -474,54 +477,57 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
      *
      * @param phoneId subId for which Sim Serial number is returned
      */
-    @Throws(Exception::class)
     fun getIccSerialNumber(phoneId: Int = 0): String {
-        val subscriptionId = getValidPhoneIdBySubid(phoneId)
-        return when {
-            Build.VERSION.SDK_INT >= 28 -> {
-                val clazz = TelephonyManager::class.java
-                val method = clazz.getDeclaredMethod("getSimSerialNumber", Int::class.java)
-                method.isAccessible = true
-                val result = method.invoke(mTM, subscriptionId)
-                result as? String ?: ""
-            }
-
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                mIPhoneSubInfo?.getIccSerialNumberForSubscriber(
-                    subscriptionId, CallRecordController.get().application.packageName
-                ) ?: ""
-            }
-
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> {
-                val clazz = IPhoneSubInfo::class.java
-                val method = clazz.getDeclaredMethod(
-                    "getIccSerialNumberForSubscriber", Long::class.java
-                )
-                method.isAccessible = true
-                val result = method.invoke(getSubscriberInfo(), subscriptionId)
-                result as? String ?: ""
-            }
-
-            else -> {
-                var result: String?
-                if (subscriptionId > 0) {
-                    result = SystemProperties.get(
-                        TelephonyProperties.PROPERTY_RIL_SIM_ICCID_KEYS[subscriptionId], ""
-                    )
-                } else {
-                    val clazz = IPhoneSubInfo::class.java
-                    val method = clazz.getDeclaredMethod("getIccSerialNumber")
+        try {
+            val subscriptionId = getValidPhoneIdBySubid(phoneId)
+            return when {
+                Build.VERSION.SDK_INT >= 28 -> {
+                    val clazz = TelephonyManager::class.java
+                    val method = clazz.getDeclaredMethod("getSimSerialNumber", Int::class.java)
                     method.isAccessible = true
-                    val iccid = method.invoke(getSubscriberInfo())
-                    result = iccid as? String
-                    if (null == result || TextUtils.isEmpty(result.toString())) {
+                    val result = method.invoke(mTM, subscriptionId)
+                    result as? String ?: ""
+                }
+    
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                    mIPhoneSubInfo?.getIccSerialNumberForSubscriber(
+                        subscriptionId, CallRecordController.get().application.packageName
+                    ) ?: ""
+                }
+    
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> {
+                    val clazz = IPhoneSubInfo::class.java
+                    val method = clazz.getDeclaredMethod(
+                        "getIccSerialNumberForSubscriber", Long::class.java
+                    )
+                    method.isAccessible = true
+                    val result = method.invoke(getSubscriberInfo(), subscriptionId)
+                    result as? String ?: ""
+                }
+    
+                else -> {
+                    var result: String?
+                    if (subscriptionId > 0) {
                         result = SystemProperties.get(
                             TelephonyProperties.PROPERTY_RIL_SIM_ICCID_KEYS[subscriptionId], ""
                         )
+                    } else {
+                        val clazz = IPhoneSubInfo::class.java
+                        val method = clazz.getDeclaredMethod("getIccSerialNumber")
+                        method.isAccessible = true
+                        val iccid = method.invoke(getSubscriberInfo())
+                        result = iccid as? String
+                        if (null == result || TextUtils.isEmpty(result.toString())) {
+                            result = SystemProperties.get(
+                                TelephonyProperties.PROPERTY_RIL_SIM_ICCID_KEYS[subscriptionId], ""
+                            )
+                        }
                     }
+                    result ?: ""
                 }
-                result ?: ""
             }
+        } catch(e: Exception) {
+            return "unknown"
         }
     }
 

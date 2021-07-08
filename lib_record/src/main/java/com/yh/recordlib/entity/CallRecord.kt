@@ -129,6 +129,11 @@ open class CallRecord : RealmObject {
      */
     var hasChinaTELECOM: Boolean = false
     
+    /**
+     * 同步次数
+     */
+    var syncCount: Int = 0
+    
     constructor() : super()
     
     @TestOnly
@@ -151,7 +156,8 @@ open class CallRecord : RealmObject {
         isNoMapping: Boolean,
         isDeleted: Boolean,
         isManualSynced: Boolean = false,
-        hasChinaTELECOM: Boolean = false
+        hasChinaTELECOM: Boolean = false,
+        syncCount: Int = 0,
     ) : super() {
         this.recordId = recordId
         this.phoneNumber = phoneNumber
@@ -172,6 +178,7 @@ open class CallRecord : RealmObject {
         this.isDeleted = isDeleted
         this.isManualSynced = isManualSynced
         this.hasChinaTELECOM = hasChinaTELECOM
+        this.syncCount = syncCount
     }
     
     /**
@@ -278,6 +285,27 @@ open class CallRecord : RealmObject {
     }
     
     override fun toString(): String {
-        return "CallRecord(recordId='$recordId', phoneNumber='$phoneNumber', callStartTime=${callStartTime.toDate}, callOffHookTime=${callOffHookTime.toDate}, callEndTime=${callEndTime.toDate}, callType=$callType, audioFilePath=$audioFilePath, synced=$synced, callLogId=$callLogId, duration=$duration, needRecalculated=$needRecalculated, recalculated=$recalculated, callState=$callState, phoneAccountId=$phoneAccountId, mccMnc=$mccMnc, isNoMapping=$isNoMapping, isDeleted=$isDeleted, isManualSynced=$isManualSynced, hasChinaTELECOM=$hasChinaTELECOM)"
+        return """
+            |CallRecord(recordId='$recordId',
+            |phoneNumber='$phoneNumber',
+            |callStartTime=${callStartTime.toDate},
+            |callOffHookTime=${callOffHookTime.toDate},
+            |callEndTime=${callEndTime.toDate},
+            |callType=$realCallType,
+            |audioFilePath=$audioFilePath,
+            |synced=$synced,
+            |callLogId=$callLogId,
+            |duration=$duration,
+            |needRecalculated=$needRecalculated,
+            |recalculated=$recalculated,
+            |callState=$callState,
+            |phoneAccountId=$phoneAccountId,
+            |mccMnc=$mccMnc,
+            |isNoMapping=$isNoMapping,
+            |isDeleted=$isDeleted,
+            |isManualSynced=$isManualSynced,
+            |hasChinaTELECOM=$hasChinaTELECOM),
+            |syncCount=$syncCount
+            |""".trimMargin().lines().joinToString(" ")
     }
 }

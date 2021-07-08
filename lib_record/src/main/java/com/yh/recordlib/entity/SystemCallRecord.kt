@@ -37,7 +37,14 @@ open class SystemCallRecord : RealmObject, Comparable<SystemCallRecord> {
     }
     
     override fun toString(): String {
-        return "SystemCallRecord(callId=$callId, date=${date.toDate}, duration=$duration, type=$type, phoneAccountId=$phoneAccountId, phoneNumber='$phoneNumber')"
+        return """
+            |SystemCallRecord(callId=$callId,
+            |date=${date.toDate},
+            |duration=$duration,
+            |type=$type,
+            |phoneAccountId=$phoneAccountId,
+            |phoneNumber='$phoneNumber')
+            |""".trimMargin().lines().joinToString(" ")
     }
     
     override fun compareTo(other: SystemCallRecord): Int {

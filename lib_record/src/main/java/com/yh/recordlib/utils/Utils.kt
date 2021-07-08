@@ -19,7 +19,7 @@ fun logLevel(value: Int): String {
 
 internal val isMIUI by lazy { Build.MANUFACTURER.contains("xiaomi", true) }
 
-private val DATE_FORMATTER by lazy { SimpleDateFormat("yyyy.M.d HH:mm", Locale.CHINESE) }
+private val DATE_FORMATTER by lazy { SimpleDateFormat("yyyy.M.d HH:mm:ss", Locale.CHINESE) }
 
 internal val Long.toDate
     get() =
