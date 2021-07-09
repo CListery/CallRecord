@@ -180,9 +180,10 @@ class SyncCallService : SafeJobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            TelephonyCenter.get().libCursor(callLogResult)
+            printCursor(callLogResult, true)
             
             callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
+                printLog(Log.INFO, systemRecords.joinToString("\n") { "$it" })
                 if(systemRecords.isNotEmpty()) {
                     val recordMappingInfo = findMappingRecords(systemRecords, allUnSyncRecords)
                     
@@ -308,9 +309,9 @@ class SyncCallService : SafeJobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            printLog(Log.DEBUG, callLogResult)
             
             callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
+                printLog(Log.INFO, systemRecords.mapIndexed { index, systemCallRecord -> "| $index $systemCallRecord" }.joinToString("\n"))
                 if(systemRecords.isNotEmpty()) {
                     if(systemRecords.size == 1) {
                         // 只有一条记录的情况直接进行同步

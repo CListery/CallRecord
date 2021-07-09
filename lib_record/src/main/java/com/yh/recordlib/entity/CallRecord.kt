@@ -8,8 +8,6 @@ import io.realm.annotations.PrimaryKey
 import io.realm.annotations.RealmClass
 import io.realm.annotations.Required
 import org.jetbrains.annotations.TestOnly
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlin.math.min
 
 /**
@@ -201,11 +199,11 @@ open class CallRecord : RealmObject {
         if(recalculated) {
             return
         }
-    
+        
         if(CallType.CallOut != realCallType) {
             return
         }
-    
+        
         if(phoneAccountId ?: -1 < 0) {
             //未能获取到卡槽信息
             if(hasChinaTELECOM) {
@@ -255,7 +253,8 @@ open class CallRecord : RealmObject {
     }
     
     private fun checkNeedRecalculate(): Boolean {
-        val subscriptionId = phoneAccountId ?: -1
+        val subscriptionId = phoneAccountId
+            ?: -1
         TelephonyCenter.get().libW("checkNeedRecalculate subId: $subscriptionId")
         var targetSimOperator = TelephonyCenter.get().getSimOperator(subscriptionId)
         
@@ -285,14 +284,14 @@ open class CallRecord : RealmObject {
     }
     
     override fun toString(): String {
-        return """
-            |CallRecord(recordId='$recordId',
-            |phoneNumber='$phoneNumber',
-            |callStartTime=${callStartTime.toDate},
-            |callOffHookTime=${callOffHookTime.toDate},
-            |callEndTime=${callEndTime.toDate},
-            |callType=$realCallType,
-            |audioFilePath=$audioFilePath,
+        return """CallRecord(
+            |recordId="$recordId",
+            |phoneNumber="$phoneNumber",
+            |callStartTime[${callStartTime.toDate}]=$callStartTime,
+            |callOffHookTime[${callOffHookTime.toDate}]=$callOffHookTime,
+            |callEndTime[${callEndTime.toDate}]=$callEndTime,
+            |callType[$realCallType]=$callType,
+            |audioFilePath="$audioFilePath",
             |synced=$synced,
             |callLogId=$callLogId,
             |duration=$duration,
@@ -300,12 +299,12 @@ open class CallRecord : RealmObject {
             |recalculated=$recalculated,
             |callState=$callState,
             |phoneAccountId=$phoneAccountId,
-            |mccMnc=$mccMnc,
+            |mccMnc="$mccMnc",
             |isNoMapping=$isNoMapping,
             |isDeleted=$isDeleted,
             |isManualSynced=$isManualSynced,
-            |hasChinaTELECOM=$hasChinaTELECOM),
+            |hasChinaTELECOM=$hasChinaTELECOM,
             |syncCount=$syncCount
-            |""".trimMargin().lines().joinToString(" ")
+            |)""".trimMargin().lines().joinToString("")
     }
 }

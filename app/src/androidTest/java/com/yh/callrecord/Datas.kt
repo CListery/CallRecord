@@ -71,5 +71,20 @@ val dataRecords = arrayListOf(
         Truth.assertThat(recordMappingInfo.mappingRecords.size).isEqualTo(1)
         Truth.assertThat(recordMappingInfo.mappingRecords.keys.first().duration).isEqualTo(20)
         Truth.assertThat(recordMappingInfo.mappingRecords.values.first().recordId).isEqualTo("03333361544423423b5003242342")
+    },
+    RecordData(
+        listOf(
+            CallRecord(recordId="0542d05829c8402c022608002c2c", phoneNumber="13708446112", callStartTime=1625810520000, callOffHookTime=0, callEndTime=0, callType=2, synced=false, callLogId=0, duration=0, recalculated=false, callState=0, phoneAccountId=0, isNoMapping=true, isDeleted=false)
+        ),
+        listOf(
+            SystemCallRecord(callId=4705, date=1625811180000, duration=27, type=2, phoneAccountId=1, phoneNumber="13708446112"),
+            SystemCallRecord(callId=4704, date=1625811120000, duration=0, type=2, phoneAccountId=1, phoneNumber="13708446112"),
+            SystemCallRecord(callId=4703, date=1625810520000, duration=61, type=2, phoneAccountId=1, phoneNumber="13708446112")
+        )
+    ) { recordMappingInfo ->
+        Truth.assertThat(recordMappingInfo.noMappingRecords.size).isEqualTo(0)
+        Truth.assertThat(recordMappingInfo.mappingRecords.size).isEqualTo(1)
+        Truth.assertThat(recordMappingInfo.mappingRecords.keys.first().duration).isEqualTo(61)
+        Truth.assertThat(recordMappingInfo.mappingRecords.values.first().recordId).isEqualTo("0542d05829c8402c022608002c2c")
     }
 )
