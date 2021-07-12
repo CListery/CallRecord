@@ -123,8 +123,8 @@ class SyncCallService : SafeJobIntentService() {
             TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
             return
         }
-        
-        val allUnSyncRecords = findAllUnSyncRecords(TelephonyCenter.get().getRecordConfigure().syncTimeOffset)
+    
+        val allUnSyncRecords = findAllUnSyncRecords(TelephonyCenter.get().getRecordConfigure().syncTimeOffset, TelephonyCenter.get().getRecordConfigure().maxRetryCount)
         TelephonyCenter.get().libD("syncAllRecord: allUnSyncRecords -> $allUnSyncRecords")
         if(allUnSyncRecords.isEmpty()) {
             return

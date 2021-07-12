@@ -51,6 +51,7 @@ class CallRecordController private constructor(
         @JvmStatic
         fun initialization(configure: RecordConfigure) {
             var instances = mInstances
+            var reInitialization = false
             if(null == instances) {
                 instances = CallRecordController(
                     configure.ctx,
@@ -65,6 +66,7 @@ class CallRecordController private constructor(
                 mInstances = instances
             } else {
                 TelephonyCenter.get().libW("reInitialization")
+                reInitialization = true
                 instances.needInitSync = configure.needInitSync
                 instances.dbFileDirName = configure.dbFileDirName.invoke()
                 instances.dbVersion = configure.dbVersion
@@ -73,7 +75,7 @@ class CallRecordController private constructor(
                 instances.maxRetryCount = configure.maxRetryCount
                 instances.modules = configure.modules?.invoke()
             }
-            instances.setupConfig()
+            instances.setupConfig(reInitialization)
         }
     }
     
@@ -94,7 +96,7 @@ class CallRecordController private constructor(
         TelephonyCenter.get().libW("init done!")
     }
     
-    private fun setupConfig() {
+    private fun setupConfig(reInitialization: Boolean) {
         TelephonyCenter.get().libW("setupConfig")
         val builder = RealmConfiguration.Builder()
         builder.directory(File(dbFileDirName))
@@ -107,7 +109,7 @@ class CallRecordController private constructor(
             RealmConfigManager.initModule(module::class.java, builder)
         }
         
-        if(needInitSync) {
+        if(!reInitialization && needInitSync) {
             mHandler.postDelayed({ SyncCallService.enqueueWorkById(application, SyncCallService.SYNC_ALL_RECORD_ID) }, 2000)
         }
         TelephonyCenter.get().libW("setupConfig done!")

@@ -16,7 +16,7 @@ fun findRecordById(recordId: String): CallRecord? {
     return results.firstOrNull()
 }
 
-fun findAllUnSyncRecords(syncTimeOffset: Long): List<CallRecord> {
+fun findAllUnSyncRecords(syncTimeOffset: Long, maxSyncCount: Int = Int.MAX_VALUE): List<CallRecord> {
     val results = querySorted<CallRecord>("callStartTime", Sort.DESCENDING) {
         if(syncTimeOffset != Long.MAX_VALUE) {
             val date = System.currentTimeMillis()
@@ -26,6 +26,9 @@ fun findAllUnSyncRecords(syncTimeOffset: Long): List<CallRecord> {
         }
         equalTo("synced", false)
         equalTo("isDeleted", false)
+        if(Int.MAX_VALUE != maxSyncCount) {
+            lessThan("syncCount", maxSyncCount)
+        }
     }
     TelephonyCenter.get().libD("findAllUnSyncRecords: ${results.size}")
     return results
