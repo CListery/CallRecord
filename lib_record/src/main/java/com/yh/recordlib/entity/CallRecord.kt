@@ -132,6 +132,16 @@ open class CallRecord : RealmObject {
      */
     var syncCount: Int = 0
     
+    /**
+     * 最后一次同步的时间
+     */
+    var lastSyncTime: Long = 0L
+    
+    // /**
+    //  * 最后一次同步的日志
+    //  */
+    // var lastSyncLog: String = ""
+    
     constructor() : super()
     
     @TestOnly

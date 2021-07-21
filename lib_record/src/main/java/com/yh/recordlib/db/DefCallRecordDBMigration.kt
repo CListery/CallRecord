@@ -86,6 +86,15 @@ class DefCallRecordDBMigration(private val realmMigration: RealmMigration?) : Re
                 it.set("syncCount", 0)
             }
         }
+        if(5L == oldMainVersion){
+            schema.get("CallRecord")?.addField("lastSyncTime", Long::class.java)?.transform {
+                it.set("lastSyncTime", 0)
+            }
+            TODO()
+            // schema.get("CallRecord")?.addField("lastSyncLog", String::class.java)?.transform {
+            //     it.set("lastSyncLog", "")
+            // }
+        }
         if(oldVersions.second < newVersions.second) {
             realmMigration?.migrate(realm, oldVersions.second, newVersions.second)
         }
