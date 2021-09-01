@@ -30,5 +30,5 @@
 ## Dependencies
 - [Realm](httpshttps://github.com/realm)
 - [RxAndroid](https://github.com/ReactiveX/RxAndroid)
-- [Kotlin-Realm-Extensions](https://github.com/vicpinm/Kotlin-Realm-Extensions)
+- [Kotlin-Realm-Extensions](https://github.com/CListery/Kotlin-Realm-Extensions)
 - [AndLinker](https://github.com/codezjx/AndLinker)
