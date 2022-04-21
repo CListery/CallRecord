@@ -77,12 +77,14 @@ class SyncCallService : SafeJobIntentService() {
     }
     
     private var isManualSync: Boolean = false
+    private var notLogout: Boolean = false
     private var manualSyncLogAdapter: TheLogAdapter? = null
     private var strategy: ManualSyncLogFormatStrategy? = null
     
     override fun onHandleWork(work: Intent) {
         isManualSync = work.getBooleanExtra(Constants.EXTRA_IS_MANUAL_SYNC, false)
-        if(isManualSync) {
+        notLogout = work.getBooleanExtra(Constants.EXTRA_NOT_LOGFILE, false)
+        if(isManualSync && !notLogout) {
             val logDir = work.getStringExtra(Constants.EXTRA_LOG_DIR)
                 ?: cacheDir.absolutePath
             val logFileName = work.getStringExtra(Constants.EXTRA_LOG_FILE_NAME)
