@@ -61,5 +61,15 @@
       <option name="name" value="maven" />
       <option name="url" value="http://jfrog.fangstar.com/artifactory/libs-release/" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="artifactory_oss" />
+      <option name="name" value="artifactory_oss" />
+      <option name="url" value="http://jfrog.fangstar.com/artifactory/global_maven/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="maven" />
+      <option name="name" value="maven" />
+      <option name="url" value="https://jitpack.io" />
+    </remote-repository>
   </component>
 </project>

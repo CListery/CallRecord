@@ -1,6 +1,6 @@
 package com.yh.recordlib.entity
 
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.utils.toDate
 import io.realm.RealmObject

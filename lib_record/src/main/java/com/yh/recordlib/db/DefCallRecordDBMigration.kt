@@ -1,6 +1,6 @@
 package com.yh.recordlib.db
 
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libW
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.TelephonyCenter
 import io.realm.DynamicRealm

@@ -2,10 +2,10 @@ package com.yh.recordlib.log
 
 import android.os.HandlerThread
 import androidx.annotation.NonNull
-import com.yh.appinject.logger.FormatStrategy
-import com.yh.appinject.logger.LogStrategy
-import com.yh.appinject.logger.impl.DiskLogStrategy
-import com.yh.appinject.logger.impl.DiskLogStrategy.*
+import com.yh.appbasic.logger.FormatStrategy
+import com.yh.appbasic.logger.LogStrategy
+import com.yh.appbasic.logger.impl.DiskLogStrategy
+import com.yh.appbasic.logger.impl.DiskLogStrategy.*
 import com.yh.recordlib.utils.logLevel
 import java.io.File
 import java.text.SimpleDateFormat

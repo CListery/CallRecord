@@ -3,7 +3,7 @@ package com.yh.recordlib.ext
 import android.database.Cursor
 import android.os.Build
 import android.provider.CallLog
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.SystemCallRecord
 

@@ -1,6 +1,6 @@
 package com.yh.recordlib.ext
 
-import com.yh.appinject.logger.ext.libD
+import com.yh.appbasic.logger.ext.libD
 import com.yh.krealmextensions.querySorted
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord

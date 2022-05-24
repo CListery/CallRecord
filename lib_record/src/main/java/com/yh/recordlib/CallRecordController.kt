@@ -4,8 +4,8 @@ import android.app.Application
 import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
-import com.yh.appinject.logger.ext.libE
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libE
+import com.yh.appbasic.logger.ext.libW
 import com.yh.krealmextensions.RealmConfigManager
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.db.DefCallRecordDBMigration

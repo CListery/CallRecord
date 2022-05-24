@@ -6,11 +6,11 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
-import com.yh.appinject.logger.ext.libD
-import com.yh.appinject.logger.ext.libW
-import com.yh.appinject.logger.logD
-import com.yh.appinject.logger.logE
-import com.yh.appinject.logger.logW
+import com.yh.appbasic.logger.ext.libD
+import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.logD
+import com.yh.appbasic.logger.logE
+import com.yh.appbasic.logger.logW
 import com.yh.krealmextensions.querySortedAsync
 import com.yh.krealmextensions.save
 import com.yh.recordlib.CallRecordController
@@ -160,7 +160,7 @@ class MainAct : Activity(),
             record.save()
             thread {
                 Thread.sleep(500)
-                CallRecordController.get().manualSyncRecord(record, cacheDir.absolutePath, "msr_${record.phoneNumber}")
+                CallRecordController.get().manualSyncRecord(record, logDir = cacheDir.absolutePath, logFileName = "msr_${record.phoneNumber}")
             }
         }
     }

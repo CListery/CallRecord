@@ -47,6 +47,7 @@ dependencies {
     implementation(AppDependencies.baseLibs)
     implementation(AppDependencies.androidx.legacy)
     
+    implementation(AppDependencies.clistery.appbasic)
     implementation(AppDependencies.clistery.appinject)
     implementation(AppDependencies.clistery.kotlin_realm_ext)
     //AndLinker

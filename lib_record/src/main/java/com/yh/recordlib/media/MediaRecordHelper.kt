@@ -4,7 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.media.MediaRecorder
 import com.yh.krealmextensions.save
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType

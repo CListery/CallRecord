@@ -22,8 +22,8 @@ import com.android.internal.telephony.IPhoneSubInfo
 import com.android.internal.telephony.ITelephony
 import com.android.internal.telephony.ITelephonyRegistry
 import com.yh.appinject.InjectHelper
-import com.yh.appinject.logger.ext.libE
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libE
+import com.yh.appbasic.logger.ext.libW
 import com.yh.recordlib.cons.TelephonyProperties
 import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.inject.IRecordAppInject
