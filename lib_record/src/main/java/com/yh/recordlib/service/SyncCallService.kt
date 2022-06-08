@@ -593,6 +593,7 @@ class SyncCallService : SafeJobIntentService() {
             
             callRecord.isDeleted = false
             callRecord.isNoMapping = false
+            callRecord.syncedTime = System.currentTimeMillis()
         }
         val callRecords = mappingRecords.values.toList()
         callRecords.saveAll()

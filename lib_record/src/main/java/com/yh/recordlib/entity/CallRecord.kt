@@ -132,6 +132,11 @@ open class CallRecord : RealmObject {
      */
     var syncCount: Int = 0
     
+    /**
+     * 同步完成的时间戳
+     */
+    var syncedTime: Long = 0L
+    
     constructor() : super()
     
     @TestOnly
@@ -304,7 +309,8 @@ open class CallRecord : RealmObject {
             |isDeleted=$isDeleted,
             |isManualSynced=$isManualSynced,
             |hasChinaTELECOM=$hasChinaTELECOM,
-            |syncCount=$syncCount
+            |syncCount=$syncCount,
+            |syncedTime[${syncedTime.toDate}]=$syncedTime,
             |)""".trimMargin().lines().joinToString("")
     }
 }
