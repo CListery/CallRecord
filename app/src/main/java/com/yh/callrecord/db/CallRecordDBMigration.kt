@@ -1,6 +1,6 @@
 package com.yh.callrecord.db
 
-import com.yh.appinject.logger.logW
+import com.yh.appbasic.logger.logW
 import io.realm.DynamicRealm
 import io.realm.RealmMigration
 

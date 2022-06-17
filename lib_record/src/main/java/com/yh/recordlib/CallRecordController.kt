@@ -4,8 +4,8 @@ import android.app.Application
 import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
-import com.yh.appinject.logger.ext.libE
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libE
+import com.yh.appbasic.logger.ext.libW
 import com.yh.krealmextensions.RealmConfigManager
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.db.DefCallRecordDBMigration
@@ -157,6 +157,7 @@ class CallRecordController private constructor(
     
     fun manualSyncRecord(
         recordCall: CallRecord,
+        notLogOut: Boolean = false,
         logDir: String? = null,
         logFileName: String? = null
     ) {
@@ -165,6 +166,7 @@ class CallRecordController private constructor(
         intent.putExtra(Constants.EXTRA_IS_MANUAL_SYNC, true)
         intent.putExtra(Constants.EXTRA_LOG_DIR, logDir)
         intent.putExtra(Constants.EXTRA_LOG_FILE_NAME, logFileName)
+        intent.putExtra(Constants.EXTRA_NOT_LOGFILE, notLogOut)
         SyncCallService.enqueueWork(TelephonyCenter.get().ctx(), intent)
     }
 }

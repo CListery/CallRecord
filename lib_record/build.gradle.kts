@@ -68,6 +68,7 @@ val getSDK19LayoutLibPath = arrayOf(
 dependencies {
     implementation(AppDependencies.baseLibs)
     implementation(AppDependencies.androidx.legacy)
+    compileOnly(AppDependencies.clistery.appbasic)
     compileOnly(AppDependencies.clistery.appinject)
     compileOnly(AppDependencies.clistery.kotlin_realm_ext)
     

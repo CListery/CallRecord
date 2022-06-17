@@ -9,9 +9,9 @@ import android.provider.CallLog
 import android.text.TextUtils
 import android.util.Log
 import android.widget.Toast
-import com.yh.appinject.logger.LogsManager
-import com.yh.appinject.logger.logD
-import com.yh.appinject.logger.logW
+import com.yh.appbasic.logger.LogsManager
+import com.yh.appbasic.logger.logD
+import com.yh.appbasic.logger.logW
 import com.yh.callrecord.db.CallRecordDBMigration
 import com.yh.krealmextensions.RealmConfigManager
 import com.yh.recordlib.CallRecordController

@@ -4,7 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.Environment
-import com.yh.appinject.logger.ext.libE
+import com.yh.appbasic.logger.ext.libE
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.ext.convertBytesToMega
 import com.yh.recordlib.ext.humanReadableByteCount

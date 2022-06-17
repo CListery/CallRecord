@@ -1,6 +1,6 @@
 package com.yh.recordlib.db
 
-import com.yh.appinject.logger.ext.libW
+import com.yh.appbasic.logger.ext.libW
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.TelephonyCenter
 import io.realm.DynamicRealm
@@ -85,6 +85,13 @@ class DefCallRecordDBMigration(private val realmMigration: RealmMigration?) : Re
             schema.get("CallRecord")?.addField("syncCount", Int::class.java, FieldAttribute.REQUIRED)?.transform {
                 it.set("syncCount", 0)
             }
+            oldMainVersion++
+        }
+        if(5L == oldMainVersion){
+            schema.get("CallRecord")?.addField("syncedTime", Long::class.java, FieldAttribute.REQUIRED)?.transform {
+                it.set("syncedTime", 0)
+            }
+            oldMainVersion++
         }
         if(5L == oldMainVersion){
             schema.get("CallRecord")?.addField("lastSyncTime", Long::class.java)?.transform {

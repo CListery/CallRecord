@@ -5,8 +5,9 @@ package com.clistery.gradle
 object AppVersion {
 
     object clistery{
-        const val appinject = "1.3.6.2"
-        const val kotlin_realm_ext = "3.1.0"
+        const val appbasic = "1.0.1"
+        const val appinject = "1.4.5"
+        const val kotlin_realm_ext = "3.1.1"
     }
 
     object kotlin {

@@ -12,13 +12,13 @@ import android.text.TextUtils
 import android.util.Log
 import androidx.core.app.SafeJobIntentService
 import androidx.core.content.PermissionChecker
-import com.yh.appinject.logger.LibLogs
-import com.yh.appinject.logger.ext.libCursor
-import com.yh.appinject.logger.ext.libD
-import com.yh.appinject.logger.ext.libE
-import com.yh.appinject.logger.ext.libP
-import com.yh.appinject.logger.ext.libW
-import com.yh.appinject.logger.impl.TheLogAdapter
+import com.yh.appbasic.logger.LibLogs
+import com.yh.appbasic.logger.ext.libCursor
+import com.yh.appbasic.logger.ext.libD
+import com.yh.appbasic.logger.ext.libE
+import com.yh.appbasic.logger.ext.libP
+import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.impl.TheLogAdapter
 import com.yh.krealmextensions.saveAll
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.CallRecordController
@@ -77,12 +77,14 @@ class SyncCallService : SafeJobIntentService() {
     }
     
     private var isManualSync: Boolean = false
+    private var notLogout: Boolean = false
     private var manualSyncLogAdapter: TheLogAdapter? = null
     private var strategy: ManualSyncLogFormatStrategy? = null
     
     override fun onHandleWork(work: Intent) {
         isManualSync = work.getBooleanExtra(Constants.EXTRA_IS_MANUAL_SYNC, false)
-        if(isManualSync) {
+        notLogout = work.getBooleanExtra(Constants.EXTRA_NOT_LOGFILE, false)
+        if(isManualSync && !notLogout) {
             val logDir = work.getStringExtra(Constants.EXTRA_LOG_DIR)
                 ?: cacheDir.absolutePath
             val logFileName = work.getStringExtra(Constants.EXTRA_LOG_FILE_NAME)
@@ -591,6 +593,7 @@ class SyncCallService : SafeJobIntentService() {
             
             callRecord.isDeleted = false
             callRecord.isNoMapping = false
+            callRecord.syncedTime = System.currentTimeMillis()
         }
         val callRecords = mappingRecords.values.toList()
         callRecords.saveAll()
