@@ -9,6 +9,7 @@ import android.telephony.TelephonyManager
 import com.codezjx.andlinker.AndLinkerBinder
 import com.yh.appbasic.logger.ext.libD
 import com.yh.appbasic.logger.ext.libW
+import com.yh.krealmextensions.createManaged
 import com.yh.krealmextensions.save
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
@@ -159,7 +160,7 @@ class RecordCallService : Service() {
         if(CallType.CallOut == callType) {
             record.callStartTime = System.currentTimeMillis()
         }
-        val recordId = createRecordId()
+        val recordId = createRecordId(phoneNumber)
         record.recordId = recordId
         record.callType = callType.ordinal
         record.phoneNumber = phoneNumber
@@ -171,7 +172,7 @@ class RecordCallService : Service() {
     }
     
     @Synchronized
-    private fun createRecordId() = makeRandomUUID()
+    private fun createRecordId(phoneNumber: String) = makeRandomUUID(phoneNumber)
     
     private fun internalStartListen() {
         TelephonyCenter.get().libW("internalStartListen")
