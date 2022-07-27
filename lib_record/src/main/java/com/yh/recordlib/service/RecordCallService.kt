@@ -40,24 +40,18 @@ class RecordCallService : Service() {
     private var mRecordCallback: IRecordCallback? = null
     private val mRecordService = object : IRecordService {
         override fun resumeLastRecord(recordId: String) {
-            if(TelephonyManager.CALL_STATE_IDLE != mCurrentState) {
-                mLastRecordId = recordId
-            }
+            mLastRecordId = recordId
         }
         
         override fun startListen(callNumber: String, callType: CallType) {
             TelephonyCenter.get().libW("startListen")
-            if(TelephonyManager.CALL_STATE_IDLE == mCurrentState) {
-                makeRecord(callNumber, callType)
-                internalStartListen()
-            }
+            makeRecord(callNumber, callType)
+            internalStartListen()
         }
         
         override fun stopListen() {
             TelephonyCenter.get().libW("stopListen: $mCurrentState")
-            if(TelephonyManager.CALL_STATE_IDLE == mCurrentState) {
-                internalStopListen()
-            }
+            internalStopListen()
         }
         
         override fun registerRecordCallback(recordCallback: IRecordCallback) {
