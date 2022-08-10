@@ -153,6 +153,8 @@ class RecordCallService : Service() {
         val record = CallRecord()
         if(CallType.CallOut == callType) {
             record.callStartTime = System.currentTimeMillis()
+            // 避免监听不到通话状态改变回调
+            record.callOffHookTime = record.callStartTime
         }
         val recordId = createRecordId(phoneNumber)
         record.recordId = recordId
