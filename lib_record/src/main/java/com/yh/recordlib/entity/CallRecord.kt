@@ -221,24 +221,20 @@ open class CallRecord : RealmObject {
         }
     }
     
-    /**
-     * 大于 80 秒则认定为接通就不需要再计算
-     */
     private fun internalRecalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
         TelephonyCenter.get().libW("d:$duration - e:$callEndTime - ss:${systemCallRecord.date} - os:$originStartTime")
-        
-        if(duration in 1..91) {
-            // 经测试最长的假通话时长可达到90秒
+    
+        val ctConfig = TelephonyCenter.get().getRecordConfigure().ctConfig
+        if(duration in ctConfig.checkDurationRange) {
             needRecalculated = true
             
-            if(systemCallRecord.date - originStartTime > 10000) {
+            if(ctConfig.callStartOffsetTime > -1) {
                 // 系统通话记录开始时间大于本地通话记录开始时间
                 // 说明从开始呼出到接通期间有等待时间，即开始时间被系统重置过，通话时长是可信的
-                // 这里10s是考虑到网络等待时间，有可能先处于连接网络阶段，然后又开始错误计时
-                // 处于网络等待阶段是不计时的，所以取一个较长的10s来作为时间阀值
-                // 正常接通的情况下10s通话时长过短，可以过滤掉
-                recalculated = true
-                return
+                if(systemCallRecord.date - originStartTime > (ctConfig.callStartOffsetTime * 1000)) {
+                    recalculated = true
+                    return
+                }
             }
             
             val tmpDuration = min(callEndTime - callOffHookTime, callEndTime - callStartTime).div(1000)

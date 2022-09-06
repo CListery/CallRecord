@@ -32,5 +32,6 @@ class RecordConfigure(
     val maxCallTimeOffset: Long = BuildConfig.MAX_CALL_TIME_OFFSET,
     val minCallTimeOffset: Long = BuildConfig.MIN_CALL_TIME_OFFSET,
     val startTimeOffset:Long = BuildConfig.START_CALL_TIME_OFFSET,
-    val syncTimeOffset: Long = Long.MAX_VALUE
+    val syncTimeOffset: Long = Long.MAX_VALUE,
+    val ctConfig: CTConfig = CTConfig()
 )
