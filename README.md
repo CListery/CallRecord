@@ -1,5 +1,4 @@
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.clistery/appbasic/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.clistery/appbasic)
+[![Jitpack](https://jitpack.io/v/CListery/CallRecord.svg)](https://jitpack.io/#CListery/CallRecord)
 [![Min Sdk Version](https://img.shields.io/badge/API-19%2B-blue.svg?style=flat-square)](https://developer.android.com/about/versions/android-4.4.html)
 [![License](https://img.shields.io/badge/License-Apache%20License%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
