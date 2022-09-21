@@ -1,6 +1,5 @@
-
-[![Jitpack](https://jitpack.io/v/FangStarCom/CallRecord.svg)](https://jitpack.io/#FangStarCom/CallRecord)
-[![Build Status](https://travis-ci.org/FangStarCom/CallRecord.svg?branch=master)](https://travis-ci.org/CListery/CallRecord)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.clistery/appbasic/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.clistery/appbasic)
 [![Min Sdk Version](https://img.shields.io/badge/API-19%2B-blue.svg?style=flat-square)](https://developer.android.com/about/versions/android-4.4.html)
 [![License](https://img.shields.io/badge/License-Apache%20License%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
@@ -13,7 +12,7 @@
 3. 使用 MediaRecorder 对 VOICE_COMMUNICATION 进行监听并输出为音频 (由于无法直接监听通话上下流，所以音频质量较差，目前该功能比较鸡肋)
 
 ## Dependencies
-- [Realm](httpshttps://github.com/realm)
+- [Realm](https://github.com/realm)
 - [RxAndroid](https://github.com/ReactiveX/RxAndroid)
 - [Kotlin-Realm-Extensions](https://github.com/CListery/Kotlin-Realm-Extensions)
 - [AndLinker](https://github.com/codezjx/AndLinker)
