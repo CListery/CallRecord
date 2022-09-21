@@ -1,50 +1,20 @@
-import com.clistery.gradle.AppConfig
 import com.clistery.gradle.AppDependencies
-import com.clistery.gradle.implementation
 
 plugins {
-    id("com.android.application")
-    id("kotlin-android")
-    id("kotlin-parcelize")
-    id("kotlin-kapt")
+    id("app")
     id("realm-android")
 }
 
 android {
-    compileSdkVersion(AppConfig.compileSdk)
-    buildToolsVersion(AppConfig.buildToolsVersion)
-    
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
     defaultConfig {
-        applicationId = "com.yh.callrecord"
-        minSdkVersion(AppConfig.minSdk)
-        targetSdkVersion(AppConfig.targetSdk)
-        versionCode(AppConfig.versionCode)
-        versionName(AppConfig.versionName)
-    
-        testInstrumentationRunner("androidx.test.runner.AndroidJUnitRunner")
-        multiDexEnabled = true
-        
         buildConfigField("String", "CALL_RECORD_DB", "\"CallRecord\"")
         buildConfigField("long", "RECORD_DB_VERSION", "1")
         buildConfigField("int", "MAX_RETRY_SYNC_RECORD_COUNT", "5")
     }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-            // debuggable true
-        }
-    }
 }
 
 dependencies {
-    implementation(AppDependencies.baseLibs)
+    AppDependencies.baseLibs.forEach { implementation(it) }
     implementation(AppDependencies.androidx.legacy)
     
     implementation(AppDependencies.clistery.appbasic)

@@ -4,8 +4,9 @@ import android.app.Application
 import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
-import com.yh.appbasic.logger.ext.libE
-import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.logE
+import com.yh.appbasic.logger.logW
+import com.yh.appbasic.share.AppBasicShare
 import com.yh.krealmextensions.RealmConfigManager
 import com.yh.recordlib.cons.Constants
 import com.yh.recordlib.db.DefCallRecordDBMigration
@@ -65,7 +66,7 @@ class CallRecordController private constructor(
                 )
                 mInstances = instances
             } else {
-                TelephonyCenter.get().libW("reInitialization")
+                logW("reInitialization", loggable = TelephonyCenter.get())
                 reInitialization = true
                 instances.needInitSync = configure.needInitSync
                 instances.dbFileDirName = configure.dbFileDirName.invoke()
@@ -85,7 +86,7 @@ class CallRecordController private constructor(
     private val mRecordSyncNotifier: RecordSyncNotifier by lazy { RecordSyncNotifier.get() }
     
     init {
-        TelephonyCenter.get().libW("init")
+        logW("init", loggable = TelephonyCenter.get())
         mHandlerThread.start()
         mHandler = Handler(mHandlerThread.looper)
         
@@ -93,11 +94,11 @@ class CallRecordController private constructor(
         
         RealmConfigManager.isEnableUiThreadOption = true
         
-        TelephonyCenter.get().libW("init done!")
+        logW("init done!", loggable = TelephonyCenter.get())
     }
     
     private fun setupConfig(reInitialization: Boolean) {
-        TelephonyCenter.get().libW("setupConfig")
+        logW("setupConfig", loggable = TelephonyCenter.get())
         val builder = RealmConfiguration.Builder()
         builder.directory(File(dbFileDirName))
         builder.name(BuildConfig.CALL_RECORD_DB)
@@ -112,33 +113,33 @@ class CallRecordController private constructor(
         if(!reInitialization && needInitSync) {
             mHandler.postDelayed({ SyncCallService.enqueueWorkById(application, SyncCallService.SYNC_ALL_RECORD_ID) }, 2000)
         }
-        TelephonyCenter.get().libW("setupConfig done!")
+        logW("setupConfig done!", TelephonyCenter.get())
     }
     
     fun retry(work: Intent, delayMillis: Long = syncRetryTime) {
         val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
         if(recordId.isNullOrEmpty() || SyncCallService.SYNC_ALL_RECORD_ID == recordId) {
-            TelephonyCenter.get().libE("Can not retry sync this record $recordId, record id is invalid")
+            logE("Can not retry sync this record $recordId, record id is invalid", loggable = TelephonyCenter.get())
             return
         } else {
             val callRecord = findRecordById(recordId)
             if(null == callRecord) {
-                TelephonyCenter.get().libE("Can not retry sync this record $recordId, not found record")
+                logE("Can not retry sync this record $recordId, not found record", loggable = TelephonyCenter.get())
                 return
             }
             if(callRecord.isDeleted) {
-                TelephonyCenter.get().libE("Can not retry sync this record $recordId, has been deleted")
+                logE("Can not retry sync this record $recordId, has been deleted", loggable = TelephonyCenter.get())
                 return
             }
             if(callRecord.synced) {
-                TelephonyCenter.get().libE("Can not retry sync this record $recordId, has been synced")
+                logE("Can not retry sync this record $recordId, has been synced", loggable = TelephonyCenter.get())
                 return
             }
             if(callRecord.syncCount > maxRetryCount) {
-                TelephonyCenter.get().libE("Can not retry sync this record $recordId, re-sync count has exceeded the maximum $maxRetryCount")
+                logE("Can not retry sync this record $recordId, re-sync count has exceeded the maximum $maxRetryCount", loggable = TelephonyCenter.get())
                 return
             }
-            TelephonyCenter.get().libW("Retry TARGET:${recordId} -> ${callRecord.syncCount}")
+            logW("Retry TARGET:${recordId} -> ${callRecord.syncCount}", loggable = TelephonyCenter.get())
         }
         mHandler.postDelayed({ SyncCallService.enqueueWork(application, work) }, delayMillis)
     }
@@ -158,15 +159,11 @@ class CallRecordController private constructor(
     fun manualSyncRecord(
         recordCall: CallRecord,
         notLogOut: Boolean = false,
-        logDir: String? = null,
-        logFileName: String? = null
     ) {
         val intent = Intent()
         intent.putExtra(Constants.EXTRA_LAST_RECORD_ID, recordCall.recordId)
         intent.putExtra(Constants.EXTRA_IS_MANUAL_SYNC, true)
-        intent.putExtra(Constants.EXTRA_LOG_DIR, logDir)
-        intent.putExtra(Constants.EXTRA_LOG_FILE_NAME, logFileName)
         intent.putExtra(Constants.EXTRA_NOT_LOGFILE, notLogOut)
-        SyncCallService.enqueueWork(TelephonyCenter.get().ctx(), intent)
+        SyncCallService.enqueueWork(AppBasicShare.context, intent)
     }
 }

@@ -1,6 +1,6 @@
 package com.yh.recordlib.entity
 
-import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.logW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.utils.toDate
 import io.realm.RealmObject
@@ -197,7 +197,7 @@ open class CallRecord : RealmObject {
     }
     
     fun recalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
-        TelephonyCenter.get().libW("$synced - $recalculated - $phoneAccountId")
+        logW("$synced - $recalculated - $phoneAccountId", loggable = TelephonyCenter.get())
         if(!synced) {
             return
         }
@@ -222,7 +222,7 @@ open class CallRecord : RealmObject {
     }
     
     private fun internalRecalculateDuration(originStartTime: Long, systemCallRecord: SystemCallRecord) {
-        TelephonyCenter.get().libW("d:$duration - e:$callEndTime - ss:${systemCallRecord.date} - os:$originStartTime")
+        logW("d:$duration - e:$callEndTime - ss:${systemCallRecord.date} - os:$originStartTime", loggable = TelephonyCenter.get())
     
         val ctConfig = TelephonyCenter.get().getRecordConfigure().ctConfig
         if(duration in ctConfig.checkDurationRange) {
@@ -238,7 +238,7 @@ open class CallRecord : RealmObject {
             }
             
             val tmpDuration = min(callEndTime - callOffHookTime, callEndTime - callStartTime).div(1000)
-            TelephonyCenter.get().libW("t:$tmpDuration")
+            logW("t:$tmpDuration", loggable = TelephonyCenter.get())
             if(duration == tmpDuration) {
                 //一开始拨打就接通的情况是电信卡在安卓机上的 bug
                 duration = 0
@@ -256,7 +256,7 @@ open class CallRecord : RealmObject {
     private fun checkNeedRecalculate(): Boolean {
         val subscriptionId = phoneAccountId
             ?: -1
-        TelephonyCenter.get().libW("checkNeedRecalculate subId: $subscriptionId")
+        logW("checkNeedRecalculate subId: $subscriptionId", loggable = TelephonyCenter.get())
         var targetSimOperator = TelephonyCenter.get().getSimOperator(subscriptionId)
         
         if(TelephonyCenter.SimOperator.Unknown == targetSimOperator) {

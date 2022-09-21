@@ -21,9 +21,12 @@ import androidx.core.content.PermissionChecker
 import com.android.internal.telephony.IPhoneSubInfo
 import com.android.internal.telephony.ITelephony
 import com.android.internal.telephony.ITelephonyRegistry
+import com.yh.appbasic.logger.ILogger
+import com.yh.appbasic.logger.LogOwner
+import com.yh.appbasic.logger.logE
 import com.yh.appinject.InjectHelper
-import com.yh.appbasic.logger.ext.libE
-import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.logW
+import com.yh.appbasic.share.AppBasicShare
 import com.yh.recordlib.cons.TelephonyProperties
 import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.inject.IRecordAppInject
@@ -38,7 +41,7 @@ import com.yh.recordlib.utils.isMIUI
  * 某些低版本单卡设备在保存卡二时 subid 会大于等于 2
  */
 @Suppress("MemberVisibilityCanBePrivate", "unused")
-class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
+class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), ILogger {
 
     companion object {
         private const val TAG = "TelephonyCenter"
@@ -60,14 +63,14 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             @ArrayRes
             id: Int
         ): Array<String> {
-            return get().ctx().resources.getStringArray(id)
+            return AppBasicShare.context.resources.getStringArray(id)
         }
 
         init {
             disableAndroidPWarning()
         }
 
-        @SuppressLint("PrivateApi")
+        @SuppressLint("PrivateApi", "SoonBlockedPrivateApi")
         private fun disableAndroidPWarning() {
             if (Build.VERSION.SDK_INT < 28) {
                 return
@@ -150,13 +153,17 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
     private val mITelephony: ITelephony? by lazy { initITelephony() }
     private val mIPhoneSubInfo: IPhoneSubInfo? by lazy { initIPhoneSubInfo() }
     private val mITelephonyRegister: ITelephonyRegistry? by lazy { initITelephonyRegister() }
-
+    
+    override fun onCreateLogOwner(logOwner: LogOwner) {
+        
+    }
+    
     override fun init() {
         // initNotification()
     }
 
     private fun initNotification() {
-        val context = ctx()
+        val context = AppBasicShare.context
         val notificationManagerCompat = NotificationManagerCompat.from(context)
 
         if (Build.VERSION.SDK_INT >= 26) {
@@ -175,16 +182,16 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
     }
 
     fun setupRecordConfigure(configure: RecordConfigure) {
-        getInject().setRecordConfigure(configure)
+        inject.setRecordConfigure(configure)
     }
 
-    fun getRecordConfigure() = getInject().getRecordConfigure()
+    fun getRecordConfigure() = inject.getRecordConfigure()
 
     fun getNotification(): Notification {
-        val builder = NotificationCompat.Builder(ctx(), NOTIFY_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(AppBasicShare.context, NOTIFY_CHANNEL_ID)
 
         val intent = PendingIntent.getActivity(
-            ctx(), 0, Intent(), PendingIntent.FLAG_UPDATE_CURRENT
+            AppBasicShare.context, 0, Intent(), PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         builder.setContentTitle(NOTIFY_NAME)//设置通知栏标题
@@ -198,7 +205,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             .setVibrate(null)
             .setLights(0, 0, 0)
             .setAutoCancel(false)
-            .setSmallIcon(getInject().getNotificationIcon())//设置通知小 ICON
+            .setSmallIcon(inject.getNotificationIcon())//设置通知小 ICON
 
 //        builder.setCategory(NotificationCompat.CATEGORY_SERVICE)
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -213,16 +220,16 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
         var iTelephony: ITelephony? =
             ITelephony.Stub.asInterface(ServiceManager.getService(Context.TELEPHONY_SERVICE))
         if (null != iTelephony) {
-            libW("initITelephony DONE! -> $iTelephony")
+            logW("initITelephony DONE! -> $iTelephony", loggable = this)
             return iTelephony
         }
         try {
             val getITelephony = TelephonyManager::class.java.getDeclaredMethod("getITelephony")
             getITelephony.isAccessible = true
             iTelephony = getITelephony.invoke(mTM) as? ITelephony
-            libW("initITelephony DONE! -> $iTelephony")
+            logW("initITelephony DONE! -> $iTelephony", loggable = this)
         } catch (e: Exception) {
-            libE("initITelephony", throwable = e)
+            logE("initITelephony", throwable = e)
         }
         return iTelephony
     }
@@ -233,7 +240,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             ServiceManager.getService("iphonesubinfo")
         )
         if (null != iPhoneSubInfo) {
-            libW("initIPhoneSubInfo DONE! -> $iPhoneSubInfo")
+            logW("initIPhoneSubInfo DONE! -> $iPhoneSubInfo", loggable = this)
             return iPhoneSubInfo
         }
         try {
@@ -241,9 +248,9 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
                 TelephonyManager::class.java.getDeclaredMethod("getSubscriberInfo")
             getSubscriberInfo.isAccessible = true
             iPhoneSubInfo = getSubscriberInfo.invoke(mTM) as? IPhoneSubInfo
-            libW("initIPhoneSubInfo DONE! -> $iPhoneSubInfo")
+            logW("initIPhoneSubInfo DONE! -> $iPhoneSubInfo", loggable = this)
         } catch (e: Exception) {
-            libE("initIPhoneSubInfo", throwable = e)
+            logE("initIPhoneSubInfo", throwable = e)
         }
         return iPhoneSubInfo
     }
@@ -254,7 +261,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             ServiceManager.getService("telephony.registry")
         )
         if (null != iTelephonyRegistry) {
-            libW("initITelephonyRegister DONE! -> $iTelephonyRegistry")
+            logW("initITelephonyRegister DONE! -> $iTelephonyRegistry", loggable = this)
             return iTelephonyRegistry
         }
         try {
@@ -262,9 +269,9 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
                 TelephonyManager::class.java.getDeclaredMethod("getTelephonyRegistry")
             getTelephonyRegistry.isAccessible = true
             iTelephonyRegistry = getTelephonyRegistry.invoke(mTM) as? ITelephonyRegistry
-            libW("initITelephonyRegister DONE! -> $iTelephonyRegistry")
+            logW("initITelephonyRegister DONE! -> $iTelephonyRegistry", loggable = this)
         } catch (e: Exception) {
-            libE("initITelephonyRegister", throwable = e)
+            logE("initITelephonyRegister", throwable = e)
         }
         return iTelephonyRegistry
     }
@@ -556,7 +563,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
             try {
                 throw InvalidSubscriberIdException(phoneId, max)
             } catch (e: Exception) {
-                libE("isValidPhoneId", throwable = e)
+                logE("isValidPhoneId", throwable = e)
                 return false
             }
         }
@@ -587,7 +594,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
 
     fun call(context: Context, callNumber: String?, iRecordService: IRecordService?, iRecordCallback: IRecordCallback?) {
         if (null == callNumber || null == iRecordService) {
-            libW("call fail!")
+            logW("call fail!", loggable = this)
             return
         }
         if (PermissionChecker.PERMISSION_GRANTED != PermissionChecker.checkSelfPermission(context, Manifest.permission.CALL_PHONE)) {
@@ -609,7 +616,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>() {
     
     fun listenCall(callNumber: String?, iRecordService: IRecordService?, iRecordCallback: IRecordCallback?){
         if (null == callNumber || null == iRecordService) {
-            libW("call fail!")
+            logW("call fail!", loggable = this)
             return
         }
         if(null != iRecordCallback) {

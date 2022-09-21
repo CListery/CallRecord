@@ -4,7 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.media.MediaRecorder
 import com.yh.krealmextensions.save
-import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.logW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
 import com.yh.recordlib.entity.CallType
@@ -43,7 +43,7 @@ class MediaRecordHelper(private val mCtx: Application) {
 
     fun startRecord(callRecord: CallRecord) {
         if(!mEnable){
-            TelephonyCenter.get().libW("enable: $mEnable")
+            logW("enable: $mEnable", loggable = TelephonyCenter.get())
             return
         }
         if(isRecordStarted.get()) {
@@ -75,7 +75,7 @@ class MediaRecordHelper(private val mCtx: Application) {
 
     fun stopRecord() {
         if(!mEnable){
-            TelephonyCenter.get().libW("enable: $mEnable")
+            logW("enable: $mEnable", loggable = TelephonyCenter.get())
             return
         }
         if(null != mAudioRecord && isRecordStarted.get()) {

@@ -1,6 +1,6 @@
 package com.yh.recordlib.db
 
-import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.logW
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.TelephonyCenter
 import io.realm.DynamicRealm
@@ -39,7 +39,7 @@ class DefCallRecordDBMigration(private val realmMigration: RealmMigration?) : Re
     override fun migrate(realm: DynamicRealm, oldVersion: Long, newVersion: Long) {
         val oldVersions = getVersions(oldVersion)
         val newVersions = getVersions(newVersion)
-        TelephonyCenter.get().libW("main migrate: ${oldVersions.first} -> ${newVersions.first}")
+        logW("main migrate: ${oldVersions.first} -> ${newVersions.first}", loggable = TelephonyCenter.get())
         
         val newMainVersion = newVersions.first
         var oldMainVersion = oldVersions.first

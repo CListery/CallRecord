@@ -7,9 +7,8 @@ import android.os.IBinder
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import com.codezjx.andlinker.AndLinkerBinder
-import com.yh.appbasic.logger.ext.libD
-import com.yh.appbasic.logger.ext.libW
-import com.yh.krealmextensions.createManaged
+import com.yh.appbasic.logger.logD
+import com.yh.appbasic.logger.logW
 import com.yh.krealmextensions.save
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.CallRecord
@@ -44,13 +43,13 @@ class RecordCallService : Service() {
         }
         
         override fun startListen(callNumber: String, callType: CallType) {
-            TelephonyCenter.get().libW("startListen")
+            logW("startListen", loggable = TelephonyCenter.get())
             makeRecord(callNumber, callType)
             internalStartListen()
         }
         
         override fun stopListen() {
-            TelephonyCenter.get().libW("stopListen: $mCurrentState")
+            logW("stopListen: $mCurrentState", loggable = TelephonyCenter.get())
             internalStopListen()
         }
         
@@ -67,7 +66,7 @@ class RecordCallService : Service() {
     
     private val mStateListener = object : PhoneStateListener() {
         override fun onCallStateChanged(state: Int, phoneNumber: String?) {
-            TelephonyCenter.get().libD("onCallStateChanged: $state - $phoneNumber")
+            logD("onCallStateChanged: $state - $phoneNumber", loggable = TelephonyCenter.get())
             internalCallStateChanged(state)
         }
     }
@@ -83,10 +82,10 @@ class RecordCallService : Service() {
                 if(TelephonyManager.CALL_STATE_IDLE != mCurrentState) {
                     //挂断
                     mCurrentState = state
-                    TelephonyCenter.get().libD("IDLE 1: $mLastRecordId")
+                    logD("IDLE 1: $mLastRecordId", loggable = TelephonyCenter.get())
                     if(EMPTY_RECORD_ID != mLastRecordId) {
                         val cr = findRecordById(mLastRecordId)
-                        TelephonyCenter.get().libD("IDLE 2: $cr")
+                        logD("IDLE 2: $cr", loggable = TelephonyCenter.get())
                         if(null != cr) {
                             cr.callEndTime = System.currentTimeMillis()
                             cr.save()
@@ -171,13 +170,13 @@ class RecordCallService : Service() {
     private fun createRecordId(phoneNumber: String) = makeRandomUUID(phoneNumber)
     
     private fun internalStartListen() {
-        TelephonyCenter.get().libW("internalStartListen")
+        logW("internalStartListen", loggable = TelephonyCenter.get())
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_CALL_STATE)
     }
     
     private fun internalStopListen() {
-        TelephonyCenter.get().libW("internalStopListen")
+        logW("internalStopListen", loggable = TelephonyCenter.get())
         val telephonyService = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         telephonyService.listen(mStateListener, PhoneStateListener.LISTEN_NONE)
     }

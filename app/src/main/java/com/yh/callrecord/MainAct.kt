@@ -6,8 +6,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
-import com.yh.appbasic.logger.ext.libD
-import com.yh.appbasic.logger.ext.libW
 import com.yh.appbasic.logger.logD
 import com.yh.appbasic.logger.logE
 import com.yh.appbasic.logger.logW
@@ -86,7 +84,6 @@ class MainAct : Activity(),
             .packageName(packageName)
             .className(RecordCallService::class.java.name)
             .build()
-            .apply { setBindCallback(this@MainAct) }
     }
     
     @SuppressLint("SetTextI18n")
@@ -111,6 +108,7 @@ class MainAct : Activity(),
             })
         
         mLinker.bind()
+        mLinker.setBindCallback(this@MainAct)
         
         findViewById<View>(R.id.mSyncBtn)?.setOnClickListener {
             SyncCallService.enqueueWorkById(application, SyncCallService.SYNC_ALL_RECORD_ID)
@@ -120,16 +118,16 @@ class MainAct : Activity(),
                 .call(this, "10010", mRecordService, mRecordCallback)
         }
         findViewById<View>(R.id.mGetMCCMNC)?.setOnClickListener {
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator().operatorName}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator(1).operatorName}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getSimOperator(2).operatorName}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getAllSimOperator()}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getPhoneNumber()}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getPhoneNumber(1)}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getPhoneNumber(2)}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber()}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(1)}")
-            TelephonyCenter.get().libW("-> ${TelephonyCenter.get().getIccSerialNumber(2)}")
+            logW("-> ${TelephonyCenter.get().getSimOperator().operatorName}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getSimOperator(1).operatorName}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getSimOperator(2).operatorName}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getAllSimOperator()}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getPhoneNumber()}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getPhoneNumber(1)}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getPhoneNumber(2)}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getIccSerialNumber()}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getIccSerialNumber(1)}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getIccSerialNumber(2)}", loggable = TelephonyCenter.get())
         }
         findViewById<View>(R.id.mGetLastRecord)?.setOnClickListener {
             querySortedAsync<CallRecord>({
@@ -160,7 +158,7 @@ class MainAct : Activity(),
             record.save()
             thread {
                 Thread.sleep(500)
-                CallRecordController.get().manualSyncRecord(record, logDir = cacheDir.absolutePath, logFileName = "msr_${record.phoneNumber}")
+                CallRecordController.get().manualSyncRecord(record)
             }
         }
     }
@@ -173,7 +171,9 @@ class MainAct : Activity(),
     }
     
     override fun onDestroy() {
+        logD("onDestroy")
         CallRecordController.get().clearManualSyncListener()
+        mLinker.setBindCallback(null)
         mLinker.unbind()
         super.onDestroy()
     }
@@ -188,7 +188,7 @@ class MainAct : Activity(),
     }
     
     override fun onUnBind() {
-        TelephonyCenter.get().libD("onUnBind")
+        logD("onUnBind")
         mBindSuccess.set(false)
     }
 }

@@ -7,11 +7,13 @@ import android.net.Uri
 import android.os.Handler
 import android.provider.CallLog
 import android.text.TextUtils
-import android.util.Log
 import android.widget.Toast
-import com.yh.appbasic.logger.LogsManager
 import com.yh.appbasic.logger.logD
+import com.yh.appbasic.logger.logOwner
 import com.yh.appbasic.logger.logW
+import com.yh.appbasic.logger.owner.AppLogger
+import com.yh.appbasic.logger.owner.LibLogger
+import com.yh.appbasic.share.AppBasicShare
 import com.yh.callrecord.db.CallRecordDBMigration
 import com.yh.krealmextensions.RealmConfigManager
 import com.yh.recordlib.CallRecordController
@@ -41,9 +43,9 @@ class App : Application(), IRecordAppInject {
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)
 
-        if (!isInAppProcess(base)) {
-            return
-        }
+//        if (!isInAppProcess(base)) {
+//            return
+//        }
 
         logW("attachBaseContext: $base")
 
@@ -53,17 +55,20 @@ class App : Application(), IRecordAppInject {
     override fun onCreate() {
         super.onCreate()
         logW("onCreate: $mApplicationCtx")
-
+    
+        AppBasicShare.install(this)
+    
         if (null == mApplicationCtx) {
             return
         }
 
-        LogsManager.get().setDefLoggerConfig(appConfig = true to Log.VERBOSE)
+        AppLogger.on()
+        LibLogger.off()
         
         RealmConfigManager.isEnableUiThreadOption = true
         
         TelephonyCenter.get().register(this)
-        TelephonyCenter.get().loggerConfig(true to Log.VERBOSE)
+        TelephonyCenter.get().logOwner.on()
         val dbFileDirName =
             PreferencesUtils.getCommonPref().getString("record_configure_dbFileDirName", "")
         if (!TextUtils.isEmpty(dbFileDirName)) {
@@ -146,10 +151,6 @@ class App : Application(), IRecordAppInject {
             com.yh.recordlib.BuildConfig.CALL_RECORD_RETRY_TIME,
             BuildConfig.MAX_RETRY_SYNC_RECORD_COUNT
         )
-    }
-
-    override fun getApplication(): Application {
-        return this
     }
 
     override fun showTipMsg(msg: String) {

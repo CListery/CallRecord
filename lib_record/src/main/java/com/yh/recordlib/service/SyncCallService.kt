@@ -5,20 +5,14 @@ import android.annotation.SuppressLint
 import android.content.ContentProviderClient
 import android.content.Context
 import android.content.Intent
-import android.database.Cursor
 import android.os.Build
 import android.provider.CallLog
 import android.text.TextUtils
-import android.util.Log
 import androidx.core.app.SafeJobIntentService
 import androidx.core.content.PermissionChecker
-import com.yh.appbasic.logger.LibLogs
-import com.yh.appbasic.logger.ext.libCursor
-import com.yh.appbasic.logger.ext.libD
-import com.yh.appbasic.logger.ext.libE
-import com.yh.appbasic.logger.ext.libP
-import com.yh.appbasic.logger.ext.libW
-import com.yh.appbasic.logger.impl.TheLogAdapter
+import com.yh.appbasic.logger.*
+import com.yh.appbasic.logger.impl.DiskLogFormatStrategy
+import com.yh.appbasic.share.AppBasicShare
 import com.yh.krealmextensions.saveAll
 import com.yh.recordlib.BuildConfig
 import com.yh.recordlib.CallRecordController
@@ -29,7 +23,6 @@ import com.yh.recordlib.entity.SystemCallRecord
 import com.yh.recordlib.ext.findAllUnSyncRecords
 import com.yh.recordlib.ext.findRecordById
 import com.yh.recordlib.ext.parseSystemCallRecords
-import com.yh.recordlib.log.ManualSyncLogFormatStrategy
 import com.yh.recordlib.notifier.RecordSyncNotifier
 import com.yh.recordlib.utils.DeviceUtils
 import com.yh.recordlib.utils.RecordFilter.findMappingRecords
@@ -58,8 +51,8 @@ class SyncCallService : SafeJobIntentService() {
         
         @JvmStatic
         fun enqueueWorkById(context: Context, recordId: String) {
-            TelephonyCenter.get().libW("enqueueWorkById: $context - $recordId")
-            if(recordId.isEmpty()) {
+            logW("enqueueWorkById: $context - $recordId", loggable = TelephonyCenter.get())
+            if (recordId.isEmpty()) {
                 throw IllegalArgumentException("recordId can not be EMPTY!!!")
             }
             enqueueWork(context, makeSyncWork(recordId))
@@ -67,9 +60,9 @@ class SyncCallService : SafeJobIntentService() {
         
         @JvmStatic
         fun enqueueWork(context: Context, work: Intent) {
-            TelephonyCenter.get().libW("enqueueWork: $context - $work")
+            logW("enqueueWork: $context - $work", loggable = TelephonyCenter.get())
             val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
-            if(recordId.isNullOrEmpty()) {
+            if (recordId.isNullOrEmpty()) {
                 throw IllegalArgumentException("recordId can not be EMPTY!!!")
             }
             enqueueWork(context, SyncCallService::class.java, JOB_ID, work)
@@ -78,37 +71,33 @@ class SyncCallService : SafeJobIntentService() {
     
     private var isManualSync: Boolean = false
     private var notLogout: Boolean = false
-    private var manualSyncLogAdapter: TheLogAdapter? = null
-    private var strategy: ManualSyncLogFormatStrategy? = null
+    
+    private val isManualSyncLoggable get() = isManualSync && !notLogout
+    
+    private val manualSyncLogOwner by lazy { LogOwner { "" } }
+    private val loggable: Any get() = if (isManualSyncLoggable) manualSyncLogOwner else TelephonyCenter.get()
     
     override fun onHandleWork(work: Intent) {
         isManualSync = work.getBooleanExtra(Constants.EXTRA_IS_MANUAL_SYNC, false)
         notLogout = work.getBooleanExtra(Constants.EXTRA_NOT_LOGFILE, false)
-        if(isManualSync && !notLogout) {
-            val logDir = work.getStringExtra(Constants.EXTRA_LOG_DIR)
-                ?: cacheDir.absolutePath
-            val logFileName = work.getStringExtra(Constants.EXTRA_LOG_FILE_NAME)
-                ?: "msr"
-            val logFormatStrategy = ManualSyncLogFormatStrategy.Builder()
-                .logDir(logDir)
-                .logFileName(logFileName)
-                .build()
-            strategy = logFormatStrategy
-            manualSyncLogAdapter =
-                TheLogAdapter(logFormatStrategy).apply { setConfig(true to Log.VERBOSE) }
+        val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID) ?: SYNC_ALL_RECORD_ID
+        if (isManualSyncLoggable) {
+            manualSyncLogOwner.onCreateFormatStrategy {
+                DiskLogFormatStrategy.Builder(AppBasicShare.context, "MSL")
+                    .build()
+            }
         }
-        val recordId = work.getStringExtra(Constants.EXTRA_LAST_RECORD_ID)
-        printLog(Log.WARN, "onHandleWork: id:$recordId, manual:$isManualSync")
-        if(!hasCallLogPermission()) {
-            printLog(Log.ERROR, "No permission operator call_log!")
+        logW("onHandleWork: id:$recordId, manual:$isManualSync", loggable = loggable)
+        if (!hasCallLogPermission()) {
+            logE("No permission operator call_log!", loggable = loggable)
             return
         }
-        if(recordId.isNullOrEmpty() || SYNC_ALL_RECORD_ID == recordId) {
+        if (recordId.isEmpty() || SYNC_ALL_RECORD_ID == recordId) {
             syncAllRecord()
         } else {
             syncTargetRecord(work, recordId)
         }
-        printLog(Log.WARN, "All sync job is complete!")
+        logW("All sync job is complete!", loggable = loggable)
         printEnd()
     }
     
@@ -120,35 +109,39 @@ class SyncCallService : SafeJobIntentService() {
     }
     
     private fun syncAllRecord() {
-        val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
-        if(null == callLogClient) {
-            TelephonyCenter.get().libE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
+        val callLogClient =
+            contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
+        if (null == callLogClient) {
+            logE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!",
+                loggable = loggable)
             return
         }
-    
-        val allUnSyncRecords = findAllUnSyncRecords(TelephonyCenter.get().getRecordConfigure().syncTimeOffset, TelephonyCenter.get().getRecordConfigure().maxRetryCount)
-        TelephonyCenter.get().libD("syncAllRecord: allUnSyncRecords -> $allUnSyncRecords")
-        if(allUnSyncRecords.isEmpty()) {
+        
+        val allUnSyncRecords =
+            findAllUnSyncRecords(TelephonyCenter.get().getRecordConfigure().syncTimeOffset,
+                TelephonyCenter.get().getRecordConfigure().maxRetryCount)
+        logD("syncAllRecord: allUnSyncRecords -> $allUnSyncRecords", loggable = loggable)
+        if (allUnSyncRecords.isEmpty()) {
             return
         }
         
         var firstCallStartTime: Long = System.currentTimeMillis()
         var lastCallEndTime = 0L
         allUnSyncRecords.forEach { record ->
-            if(record.callStartTime in 1 until firstCallStartTime) {
+            if (record.callStartTime in 1 until firstCallStartTime) {
                 firstCallStartTime = record.callStartTime
             }
-            if(record.callEndTime > lastCallEndTime) {
+            if (record.callEndTime > lastCallEndTime) {
                 lastCallEndTime = record.callEndTime
             }
         }
         // 在监听过程中 APP 崩溃或被系统强制杀死时将监听不到通话结束时间
         // 如异常通话记录的通话开始时间大于所有正常通话记录的结束时间，则以最后一条异常记录的开始时间+30分钟作为最后一条通话记录的结束时间
         val allExceptionRecord = allUnSyncRecords.filter { it.callEndTime <= 0 }
-        if(allExceptionRecord.isNotEmpty()) {
+        if (allExceptionRecord.isNotEmpty()) {
             val lastStartRecord = allExceptionRecord.maxByOrNull { it.callStartTime }
-            if(null != lastStartRecord) {
-                if(lastStartRecord.callStartTime > lastCallEndTime) {
+            if (null != lastStartRecord) {
+                if (lastStartRecord.callStartTime > lastCallEndTime) {
                     lastCallEndTime = lastStartRecord.callStartTime + 1800000
                 }
             }
@@ -166,12 +159,14 @@ class SyncCallService : SafeJobIntentService() {
             selection.append("?")
             
             val args: ArrayList<String> = arrayListOf(
-                firstCallStartTime.minus(TelephonyCenter.get().getRecordConfigure().startTimeOffset).toString(),
-                lastCallEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset).toString()
+                firstCallStartTime.minus(TelephonyCenter.get().getRecordConfigure().startTimeOffset)
+                    .toString(),
+                lastCallEndTime.plus(TelephonyCenter.get().getRecordConfigure().maxCallTimeOffset)
+                    .toString()
             )
             val sort = CallLog.Calls.DEFAULT_SORT_ORDER
             
-            TelephonyCenter.get().libD("syncAllRecord: selection -> $selection ; args -> $args")
+            logD("syncAllRecord: selection -> $selection ; args -> $args", loggable = loggable)
             
             @SuppressLint("Recycle")
             // close by #parseSystemCallRecords
@@ -182,47 +177,51 @@ class SyncCallService : SafeJobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            printCursor(callLogResult, true)
+            logCursor(callLogResult, true, loggable = loggable)
             
             callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
-                printLog(Log.INFO, systemRecords.joinToString("\n") { "$it" })
-                if(systemRecords.isNotEmpty()) {
+                logI(systemRecords.joinToString("\n") { "$it" }, loggable = loggable)
+                if (systemRecords.isNotEmpty()) {
                     val recordMappingInfo = findMappingRecords(systemRecords, allUnSyncRecords)
                     
                     val finalAllUnSyncRecords = recordMappingInfo.noMappingRecords
                     
-                    if(recordMappingInfo.unUseSystemCallRecords.isNotEmpty()) {
-                        TelephonyCenter.get().libW("syncAllRecord: Ignored Sys records: ${recordMappingInfo.unUseSystemCallRecords}")
+                    if (recordMappingInfo.unUseSystemCallRecords.isNotEmpty()) {
+                        logW("syncAllRecord: Ignored Sys records: ${recordMappingInfo.unUseSystemCallRecords}",
+                            loggable = loggable)
                     }
                     
-                    if(recordMappingInfo.mappingRecords.isNotEmpty()) {
-                        TelephonyCenter.get().libW("syncAllRecord: synced records: ${recordMappingInfo.mappingRecords}")
+                    if (recordMappingInfo.mappingRecords.isNotEmpty()) {
+                        logW("syncAllRecord: synced records: ${recordMappingInfo.mappingRecords}",
+                            loggable = loggable)
                         syncRecordBySys(recordMappingInfo.mappingRecords)
                     }
                     
-                    if(finalAllUnSyncRecords.isNotEmpty()) {
-                        TelephonyCenter.get().libE("syncAllRecord: Failed to sync successfully: $finalAllUnSyncRecords")
+                    if (finalAllUnSyncRecords.isNotEmpty()) {
+                        logE("syncAllRecord: Failed to sync successfully: $finalAllUnSyncRecords",
+                            loggable = loggable)
                         markUnSyncAndRetry(finalAllUnSyncRecords)
                     }
                 } else {
-                    if(allUnSyncRecords.isNotEmpty()) {
-                        TelephonyCenter.get().libE("syncAllRecord: Not found sys mapping record!!")
+                    if (allUnSyncRecords.isNotEmpty()) {
+                        logE("syncAllRecord: Not found sys mapping record!!", loggable = loggable)
                         markUnSyncAndRetry(allUnSyncRecords)
                     }
                 }
             }, failAction = {
-                if(allUnSyncRecords.isNotEmpty()) {
-                    TelephonyCenter.get().libE("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!")
+                if (allUnSyncRecords.isNotEmpty()) {
+                    logE("syncAllRecord: Not found any CallRecord by ${CallLog.Calls.DATE} between $firstCallStartTime to $lastCallEndTime from system!!",
+                        loggable = loggable)
                     markUnSyncAndRetry(allUnSyncRecords)
                 }
             })
-        } catch(e: Exception) {
-            if(allUnSyncRecords.isNotEmpty()) {
-                TelephonyCenter.get().libE("syncAllRecord", throwable = e)
+        } catch (e: Exception) {
+            if (allUnSyncRecords.isNotEmpty()) {
+                logE("syncAllRecord", throwable = e, loggable = loggable)
                 markUnSyncAndRetry(allUnSyncRecords)
             }
         } finally {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 callLogClient.close()
             } else {
                 @Suppress("DEPRECATION") callLogClient.release()
@@ -235,24 +234,24 @@ class SyncCallService : SafeJobIntentService() {
      */
     private fun syncTargetRecord(work: Intent, recordId: String) {
         val recordCall = findRecordById(recordId)
-        printLog(Log.DEBUG, "syncTargetRecord: $recordCall")
-        if(null == recordCall) {
+        logD("syncTargetRecord: $recordCall", loggable = loggable)
+        if (null == recordCall) {
             return
         }
-        if(recordCall.synced || (!isManualSync && recordCall.isDeleted)) {
-            printLog(
-                Log.WARN, "syncTargetRecord: $recordId has been"
-                    .plus(if(recordCall.synced) " synced " else "")
-                    .plus(if(isManualSync) " manual " else "")
-                    .plus(if(recordCall.isDeleted) " deleted " else "")
-                    .plus(", sync count: ${recordCall.syncCount}")
-            )
+        if (recordCall.synced || (!isManualSync && recordCall.isDeleted)) {
+            logW("syncTargetRecord: $recordId has been"
+                .plus(if (recordCall.synced) " synced " else "")
+                .plus(if (isManualSync) " manual " else "")
+                .plus(if (recordCall.isDeleted) " deleted " else "")
+                .plus(", sync count: ${recordCall.syncCount}"), loggable = loggable)
             return
         }
         
-        val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
-        if(null == callLogClient) {
-            printLog(Log.ERROR, "Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!")
+        val callLogClient =
+            contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
+        if (null == callLogClient) {
+            logE("Can not load ${CallLog.Calls.CONTENT_URI} ContentProvider obj!!!",
+                loggable = loggable)
             return
         }
         
@@ -271,7 +270,7 @@ class SyncCallService : SafeJobIntentService() {
             val callStartTime = recordCall.callStartTime.minus(
                 TelephonyCenter.get().getRecordConfigure().startTimeOffset
             )
-            val callEndTime = if(recordCall.callEndTime <= 0L) {
+            val callEndTime = if (recordCall.callEndTime <= 0L) {
                 callStartTime + 1800000
             } else {
                 recordCall.callEndTime.plus(
@@ -295,11 +294,12 @@ class SyncCallService : SafeJobIntentService() {
             val sort = CallLog.Calls.DEFAULT_SORT_ORDER
             
             try {
-                printLog(
-                    Log.DEBUG,
-                    "selection: ${selection.toString().replace("?", "%s").format(*args.toArray())} $sort"
+                logD(
+                    "selection: ${
+                        selection.toString().replace("?", "%s").format(*args.toArray())
+                    } $sort", loggable = loggable
                 )
-            } catch(e: Exception) {
+            } catch (e: Exception) {
             }
             
             @SuppressLint("Recycle")
@@ -313,62 +313,69 @@ class SyncCallService : SafeJobIntentService() {
             )
             
             callLogResult.parseSystemCallRecords(successAction = { systemRecords ->
-                printLog(Log.INFO, systemRecords.mapIndexed { index, systemCallRecord -> "| $index $systemCallRecord" }.joinToString("\n"))
-                if(systemRecords.isNotEmpty()) {
-                    if(systemRecords.size == 1) {
+                logI(systemRecords.mapIndexed { index, systemCallRecord -> "| $index $systemCallRecord" }
+                    .joinToString("\n"), loggable = loggable)
+                if (systemRecords.isNotEmpty()) {
+                    if (systemRecords.size == 1) {
                         // 只有一条记录的情况直接进行同步
                         syncRecordBySys(mapOf(systemRecords.first() to recordCall))
-                        printLog(Log.DEBUG, "syncTargetRecord: just find single Sys record, sync this!")
+                        logD("syncTargetRecord: just find single Sys record, sync this!",
+                            loggable = loggable)
                         return@parseSystemCallRecords
                     }
                     val recordMappingInfo = findMappingRecords(systemRecords, listOf(recordCall))
                     
-                    if(recordMappingInfo.unUseSystemCallRecords.isNotEmpty()) {
-                        printLog(Log.WARN, "syncTargetRecord: Ignored Sys records: ${recordMappingInfo.unUseSystemCallRecords}")
+                    if (recordMappingInfo.unUseSystemCallRecords.isNotEmpty()) {
+                        logW("syncTargetRecord: Ignored Sys records: ${recordMappingInfo.unUseSystemCallRecords}",
+                            loggable = loggable)
                     }
                     
-                    if(recordMappingInfo.mappingRecords.isNotEmpty()) {
-                        printLog(Log.DEBUG, "syncTargetRecord: synced records: ${recordMappingInfo.mappingRecords}")
+                    if (recordMappingInfo.mappingRecords.isNotEmpty()) {
+                        logD("syncTargetRecord: synced records: ${recordMappingInfo.mappingRecords}",
+                            loggable = loggable)
                         syncRecordBySys(recordMappingInfo.mappingRecords)
                     }
                     
-                    if(recordMappingInfo.noMappingRecords.isNotEmpty()) {
-                        printLog(Log.ERROR, "syncAllRecord: not found mapping records: ${recordMappingInfo.noMappingRecords}")
+                    if (recordMappingInfo.noMappingRecords.isNotEmpty()) {
+                        logE("syncAllRecord: not found mapping records: ${recordMappingInfo.noMappingRecords}",
+                            loggable = loggable)
                         markNoMappingRecord(recordMappingInfo.noMappingRecords)
-                        if(isManualSync) {
+                        if (isManualSync) {
                             submitSysRecords(callLogClient, recordCall)
                         } else {
                             CallRecordController.get().retry(work)
                         }
                     }
                 } else {
-                    printLog(Log.WARN, "syncTargetRecord: Not found sys mapping record!! -> $recordCall")
+                    logW("syncTargetRecord: Not found sys mapping record!! -> $recordCall",
+                        loggable = loggable)
                     markNoMappingRecord(listOf(recordCall))
-                    if(isManualSync) {
+                    if (isManualSync) {
                         submitSysRecords(callLogClient, recordCall)
                     } else {
                         CallRecordController.get().retry(work)
                     }
                 }
             }, failAction = {
-                printLog(Log.WARN, "syncTargetRecord: Not found any record with $selection from system db! -> $recordCall")
+                logW("syncTargetRecord: Not found any record with $selection from system db! -> $recordCall",
+                    loggable = loggable)
                 markNoMappingRecord(arrayListOf(recordCall))
-                if(isManualSync) {
+                if (isManualSync) {
                     submitSysRecords(callLogClient, recordCall)
                 } else {
                     CallRecordController.get().retry(work)
                 }
             })
-        } catch(e: Exception) {
-            printLog(Log.ERROR, "syncTargetRecord", throwable = e)
+        } catch (e: Exception) {
+            logE("syncTargetRecord", throwable = e, loggable = loggable)
             markNoMappingRecord(arrayListOf(recordCall))
-            if(isManualSync) {
+            if (isManualSync) {
                 submitSysRecords(callLogClient, recordCall)
             } else {
                 CallRecordController.get().retry(work)
             }
         } finally {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 callLogClient.close()
             } else {
                 @Suppress("DEPRECATION") callLogClient.release()
@@ -377,13 +384,13 @@ class SyncCallService : SafeJobIntentService() {
     }
     
     private fun submitSysRecords(callLogClient: ContentProviderClient, recordCall: CallRecord) {
-        printLog(Log.INFO, "==============[BEGIN SYS RECORDS]==============")
+        logI("==============[BEGIN SYS RECORDS]==============", loggable = loggable)
         
-        printLog(Log.INFO, "|| [CALL RECORD]")
-        printLog(Log.INFO, recordCall)
+        logI("|| [CALL RECORD]", loggable = loggable)
+        logI(recordCall, loggable = loggable)
         
-        if(!TextUtils.isEmpty(recordCall.phoneNumber)) {
-            printLog(Log.INFO, "|| callRecord phone: ${recordCall.phoneNumber}")
+        if (!TextUtils.isEmpty(recordCall.phoneNumber)) {
+            logI("|| callRecord phone: ${recordCall.phoneNumber}", loggable = loggable)
         }
         
         val selection = StringBuilder()
@@ -396,9 +403,9 @@ class SyncCallService : SafeJobIntentService() {
         selection.append("AND")
         selection.append(" ")
         selection.append("?")
-    
+        
         val callStartTime = recordCall.callStartTime.minus(600000)
-        val callEndTime = if(recordCall.callEndTime <= 0L) {
+        val callEndTime = if (recordCall.callEndTime <= 0L) {
             callStartTime + 1800000
         } else {
             recordCall.callEndTime.plus(600000)
@@ -412,17 +419,17 @@ class SyncCallService : SafeJobIntentService() {
         val sort = CallLog.Calls.DEFAULT_SORT_ORDER
         
         try {
-            printLog(Log.INFO, "|| [SELECTION]")
-            printLog(
-                Log.DEBUG,
-                "selection: ${selection.toString().replace("?", "%s").format(*args.toArray())} $sort"
-            )
-        } catch(e: Exception) {
-            printLog(Log.ERROR, "submitSysRecords", e)
+            logI("|| [SELECTION]", loggable = loggable)
+            logD(
+                "selection: ${
+                    selection.toString().replace("?", "%s").format(*args.toArray())
+                } $sort", loggable = loggable)
+        } catch (e: Exception) {
+            logE("submitSysRecords", e, loggable = loggable)
         }
         
         try {
-            printLog(Log.INFO, "|| [SYS RECORDS]")
+            logI("|| [SYS RECORDS]", loggable = loggable)
             val systemRecords = callLogClient.query(
                 CallLog.Calls.CONTENT_URI,
                 null,
@@ -430,18 +437,19 @@ class SyncCallService : SafeJobIntentService() {
                 args.toArray(arrayOf<String>()),
                 sort
             )
-            printCursor(systemRecords, true)
-            printLog(Log.DEBUG, "----------------------------------------")
+            logCursor(systemRecords, true, loggable = loggable)
+            logD("----------------------------------------", loggable = loggable)
             systemRecords.parseSystemCallRecords({
-                printLog(Log.INFO, it.mapIndexed { index, systemCallRecord -> "| $index $systemCallRecord" }.joinToString("\n"))
+                logI(it.mapIndexed { index, systemCallRecord -> "| $index $systemCallRecord" }
+                    .joinToString("\n"), loggable = loggable)
             }, {
-                printCursor(systemRecords)
+                logCursor(systemRecords, loggable = loggable)
             })
-        } catch(e: Exception) {
-            printLog(Log.ERROR, "submitSysRecords", e)
+        } catch (e: Exception) {
+            logE("submitSysRecords", e, loggable = loggable)
         }
         
-        printLog(Log.INFO, "===============[END SYS RECORDS]===============")
+        logI("===============[END SYS RECORDS]===============", loggable = loggable)
     }
     
     private fun printOtherInfo() {
@@ -451,112 +459,93 @@ class SyncCallService : SafeJobIntentService() {
     }
     
     private fun printConfigInfo() {
-        printLog(Log.INFO, "==============[START CONFIGURE INFO]==============")
+        logI("==============[START CONFIGURE INFO]==============", loggable = loggable)
         try {
             val configure = TelephonyCenter.get().getRecordConfigure()
-            printLog(Log.INFO, "|| CTX: ${configure.ctx}")
-            printLog(Log.INFO, "|| INIT_SYNC: ${configure.needInitSync}")
-            printLog(Log.INFO, "|| DB_DIR: ${configure.dbFileDirName.invoke()}")
-            printLog(
-                Log.INFO,
-                "|| DB_VER_LIB: ${BuildConfig.RECORD_DB_VERSION}"
-            )
-            printLog(
-                Log.INFO,
-                "|| DB_VER_APP: ${configure.dbVersion}"
-            )
-            printLog(Log.INFO, "|| SYNC_RETRY_TIME: ${(configure.syncRetryTime / 1000)}s")
-            printLog(Log.INFO, "|| MAX_RETRY_COUNT: ${configure.maxRetryCount}")
-            printLog(Log.INFO, "|| START_OFFSET: ${(configure.startTimeOffset / 1000)}s")
-            printLog(Log.INFO, "|| MAX_OFFSET: ${(configure.maxCallTimeOffset / 1000)}s")
-            printLog(Log.INFO, "|| MIN_OFFSET: ${(configure.minCallTimeOffset / 1000)}s")
-        } catch(e: Exception) {
-            printLog(Log.ERROR, "printConfigInfo", throwable = e)
+            logI("|| CTX: ${configure.ctx}", loggable = loggable)
+            logI("|| INIT_SYNC: ${configure.needInitSync}", loggable = loggable)
+            logI("|| DB_DIR: ${configure.dbFileDirName.invoke()}", loggable = loggable)
+            logI("|| DB_VER_LIB: ${BuildConfig.RECORD_DB_VERSION}", loggable = loggable)
+            logI("|| DB_VER_APP: ${configure.dbVersion}", loggable = loggable)
+            logI("|| SYNC_RETRY_TIME: ${(configure.syncRetryTime / 1000)}s", loggable = loggable)
+            logI("|| MAX_RETRY_COUNT: ${configure.maxRetryCount}", loggable = loggable)
+            logI("|| START_OFFSET: ${(configure.startTimeOffset / 1000)}s", loggable = loggable)
+            logI("|| MAX_OFFSET: ${(configure.maxCallTimeOffset / 1000)}s", loggable = loggable)
+            logI("|| MIN_OFFSET: ${(configure.minCallTimeOffset / 1000)}s", loggable = loggable)
+        } catch (e: Exception) {
+            logE("printConfigInfo", throwable = e, loggable = loggable)
         }
-        printLog(Log.INFO, "===============[END CONFIGURE INFO]===============")
+        logI("===============[END CONFIGURE INFO]===============", loggable = loggable)
     }
     
     private fun printMobileInfo() {
-        printLog(Log.INFO, "==============[START MOBILE INFO]==============")
+        logI("==============[START MOBILE INFO]==============", loggable = loggable)
         try {
-            printLog(Log.INFO, "|| ALL_OPERATOR: ${TelephonyCenter.get().getAllSimOperator()}")
-            printLog(Log.INFO, "|| MULTI_CONFIG: ${TelephonyCenter.get().getMultiSimConfiguration().name}")
-            printLog(Log.INFO, "|| PN0: ${TelephonyCenter.get().getPhoneNumber()}")
-            printLog(Log.INFO, "|| PN1: ${TelephonyCenter.get().getPhoneNumber(1)}")
-            printLog(Log.INFO, "|| PN2: ${TelephonyCenter.get().getPhoneNumber(2)}")
-            printLog(Log.INFO, "|| ISN0: ${TelephonyCenter.get().getIccSerialNumber()}")
-            printLog(Log.INFO, "|| ISN1: ${TelephonyCenter.get().getIccSerialNumber(1)}")
-            printLog(Log.INFO, "|| ISN2: ${TelephonyCenter.get().getIccSerialNumber(2)}")
-        } catch(e: Exception) {
-            printLog(Log.ERROR, "printMobileInfo", throwable = e)
+            logI("|| ALL_OPERATOR: ${TelephonyCenter.get().getAllSimOperator()}",
+                loggable = loggable)
+            logI("|| MULTI_CONFIG: ${TelephonyCenter.get().getMultiSimConfiguration().name}",
+                loggable = loggable)
+            logI("|| PN0: ${TelephonyCenter.get().getPhoneNumber()}", loggable = loggable)
+            logI("|| PN1: ${TelephonyCenter.get().getPhoneNumber(1)}", loggable = loggable)
+            logI("|| PN2: ${TelephonyCenter.get().getPhoneNumber(2)}", loggable = loggable)
+            logI("|| ISN0: ${TelephonyCenter.get().getIccSerialNumber()}", loggable = loggable)
+            logI("|| ISN1: ${TelephonyCenter.get().getIccSerialNumber(1)}", loggable = loggable)
+            logI("|| ISN2: ${TelephonyCenter.get().getIccSerialNumber(2)}", loggable = loggable)
+        } catch (e: Exception) {
+            logE("printMobileInfo", throwable = e, loggable = loggable)
         }
-        printLog(Log.INFO, "===============[END MOBILE INFO]===============")
+        logI("===============[END MOBILE INFO]===============", loggable = loggable)
     }
     
     private fun printDeviceInfo() {
-        printLog(Log.INFO, "==============[START DEVICE INFO]==============")
+        logI("==============[START DEVICE INFO]==============", loggable = loggable)
         try {
-            printLog(Log.INFO, "|| MANUFACTURER: ${Build.MANUFACTURER}")
-            printLog(Log.INFO, "|| DEVICE: ${Build.DEVICE}")
-            printLog(Log.INFO, "|| PRODUCT: ${Build.PRODUCT}")
-            printLog(Log.INFO, "|| MODEL: ${Build.MODEL}")
-            printLog(Log.INFO, "|| HARDWARE: ${Build.HARDWARE}")
-            printLog(Log.INFO, "|| RELEASE: ${Build.VERSION.RELEASE}")
-            printLog(Log.INFO, "|| ROOTED: ${DeviceUtils.isDeviceRooted()}")
+            logI("|| MANUFACTURER: ${Build.MANUFACTURER}", loggable = loggable)
+            logI("|| DEVICE: ${Build.DEVICE}", loggable = loggable)
+            logI("|| PRODUCT: ${Build.PRODUCT}", loggable = loggable)
+            logI("|| MODEL: ${Build.MODEL}", loggable = loggable)
+            logI("|| HARDWARE: ${Build.HARDWARE}", loggable = loggable)
+            logI("|| RELEASE: ${Build.VERSION.RELEASE}", loggable = loggable)
+            logI("|| ROOTED: ${DeviceUtils.isDeviceRooted()}", loggable = loggable)
             DeviceUtils.getMemoryInfo().forEach {
-                printLog(Log.INFO, "|| $it")
+                logI("|| $it", loggable = loggable)
             }
             DeviceUtils.getExternalAndInternalStorageInfo().forEach {
-                printLog(Log.INFO, "|| $it")
+                logI("|| $it", loggable = loggable)
             }
-        } catch(e: Exception) {
-            printLog(Log.ERROR, "printDeviceInfo", throwable = e)
+        } catch (e: Exception) {
+            logE("printDeviceInfo", throwable = e, loggable = loggable)
         }
-        printLog(Log.INFO, "===============[END DEVICE INFO]===============")
+        logI("===============[END DEVICE INFO]===============", loggable = loggable)
     }
     
     private fun printEnd() {
-        if(isManualSync) {
+        if (isManualSync) {
             printOtherInfo()
         }
-        manualSyncLogAdapter?.release()
-        RecordSyncNotifier.get().notifyManualSyncDone(strategy?.getRealLogFile())
-    }
-    
-    private fun printCursor(cursor: Cursor?, justCurRow: Boolean = false) {
-        if(isManualSync && null != manualSyncLogAdapter) {
-            LibLogs.logCursor(cursor, justCurRow, logAdapter = manualSyncLogAdapter)
-        } else {
-            TelephonyCenter.get().libCursor(cursor, justCurRow)
-        }
-    }
-    
-    private fun printLog(priority: Int = Log.DEBUG, obj: Any?, throwable: Throwable? = null) {
-        if(obj is Cursor?) {
-            printCursor(obj)
-            return
-        }
-        if(isManualSync && null != manualSyncLogAdapter) {
-            LibLogs.logP(priority, obj, logAdapter = manualSyncLogAdapter, throwable = throwable)
-        } else {
-            TelephonyCenter.get().libP(priority, obj, throwable = throwable)
+        if (isManualSyncLoggable) {
+            manualSyncLogOwner.release()
+            val diskLogFormatStrategy =
+                manualSyncLogOwner.logAdapter.formatStrategy as? DiskLogFormatStrategy
+            RecordSyncNotifier.get().notifyManualSyncDone(diskLogFormatStrategy?.getRealLogFile())
         }
     }
     
     private fun markUnSyncAndRetry(finalAllUnSyncRecords: List<CallRecord>) {
         markNoMappingRecord(finalAllUnSyncRecords)
         finalAllUnSyncRecords.map { makeSyncWork(it.recordId) }.forEachIndexed { index, work ->
-            CallRecordController.get().retry(work, CallRecordController.get().syncRetryTime + (index * 200))
+            CallRecordController.get()
+                .retry(work, CallRecordController.get().syncRetryTime + (index * 200))
         }
     }
     
     private fun markNoMappingRecord(allUnSyncRecords: List<CallRecord>) {
         allUnSyncRecords.forEach {
             it.syncCount++
-            if(isManualSync) {
+            if (isManualSync) {
                 it.isManualSynced = true
             }
-            if(it.isManualSynced && System.currentTimeMillis() - it.callStartTime > 7200000) {
+            if (it.isManualSynced && System.currentTimeMillis() - it.callStartTime > 7200000) {
                 //已经手动同步过，且2小时未能成功同步,标记为删除状态
                 it.isDeleted = true
             }
@@ -568,14 +557,14 @@ class SyncCallService : SafeJobIntentService() {
     }
     
     private fun syncRecordBySys(mappingRecords: Map<SystemCallRecord, CallRecord>) {
-        if(mappingRecords.isEmpty()) {
-            printLog(Log.ERROR, "syncRecordBySys: mappingRecords is empty!")
+        if (mappingRecords.isEmpty()) {
+            logE("syncRecordBySys: mappingRecords is empty!", loggable = loggable)
             return
         }
         mappingRecords.forEach { mr ->
             val systemCallRecord = mr.key
             val callRecord = mr.value
-            printLog(Log.DEBUG, "syncRecordBySys: $systemCallRecord")
+            logD("syncRecordBySys: $systemCallRecord", loggable = loggable)
             val originStartTime = max(callRecord.callStartTime, callRecord.callOffHookTime)
             callRecord.syncCount++
             callRecord.callLogId = systemCallRecord.callId
@@ -585,7 +574,7 @@ class SyncCallService : SafeJobIntentService() {
             callRecord.phoneAccountId = systemCallRecord.phoneAccountId
             callRecord.recalculateTime()
             callRecord.synced = true
-            if(isManualSync) {
+            if (isManualSync) {
                 callRecord.isManualSynced = true
             }
             

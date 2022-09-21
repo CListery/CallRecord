@@ -3,7 +3,7 @@ package com.yh.recordlib.ext
 import android.database.Cursor
 import android.os.Build
 import android.provider.CallLog
-import com.yh.appbasic.logger.ext.libW
+import com.yh.appbasic.logger.logW
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.entity.SystemCallRecord
 
@@ -55,14 +55,14 @@ fun Cursor?.parseSystemCallRecords(
     successAction: ((ArrayList<SystemCallRecord>) -> Unit)? = null, failAction: (() -> Unit)? = null
 ) {
     if(null == this) {
-        TelephonyCenter.get().libW("parseSystemCallRecords: cursor -> NULL!")
+        logW("parseSystemCallRecords: cursor -> NULL!", loggable = TelephonyCenter.get())
         failAction?.invoke()
         return
     }
     val records = arrayListOf<SystemCallRecord>()
     this.use callLogResult@{ result ->
         if(result.count <= 0 || !result.moveToFirst()) {
-            TelephonyCenter.get().libW("parseSystemCallRecords: count -> ${result.count}")
+            logW("parseSystemCallRecords: count -> ${result.count}", loggable = TelephonyCenter.get())
             failAction?.invoke()
             return
         }

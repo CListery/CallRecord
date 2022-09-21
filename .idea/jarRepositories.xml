@@ -12,21 +12,6 @@
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
     </remote-repository>
     <remote-repository>
-      <option name="id" value="maven" />
-      <option name="name" value="maven" />
-      <option name="url" value="http://jfrog.fx:8088/artifactory/libs-release/" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="BintrayJCenter" />
-      <option name="name" value="BintrayJCenter" />
-      <option name="url" value="https://jcenter.bintray.com/" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="Google" />
-      <option name="name" value="Google" />
-      <option name="url" value="https://dl.google.com/dl/android/maven2/" />
-    </remote-repository>
-    <remote-repository>
       <option name="id" value="MavenRepo" />
       <option name="name" value="MavenRepo" />
       <option name="url" value="https://repo.maven.apache.org/maven2/" />
@@ -34,12 +19,17 @@
     <remote-repository>
       <option name="id" value="ProjectLocalMaven" />
       <option name="name" value="ProjectLocalMaven" />
-      <option name="url" value="file:/$PROJECT_DIR$/build/.m2/repository/" />
+      <option name="url" value="file:/$PROJECT_DIR$/build/.m2/repository" />
     </remote-repository>
     <remote-repository>
-      <option name="id" value="maven" />
-      <option name="name" value="maven" />
-      <option name="url" value="http://jfrog.fx/artifactory/libs-release/" />
+      <option name="id" value="artifactory_oss" />
+      <option name="name" value="artifactory_oss" />
+      <option name="url" value="http://jfrog.fangstar.com/artifactory/global_maven/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="Google" />
+      <option name="name" value="Google" />
+      <option name="url" value="https://dl.google.com/dl/android/maven2/" />
     </remote-repository>
     <remote-repository>
       <option name="id" value="ProjectLocalMaven" />
@@ -49,27 +39,7 @@
     <remote-repository>
       <option name="id" value="ProjectLocalMaven" />
       <option name="name" value="ProjectLocalMaven" />
-      <option name="url" value="file:/$PROJECT_DIR$/build/.m2/repository" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="maven" />
-      <option name="name" value="maven" />
-      <option name="url" value="http://jfrog.fangstar.com/artifactory//libs-release/" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="maven" />
-      <option name="name" value="maven" />
-      <option name="url" value="http://jfrog.fangstar.com/artifactory/libs-release/" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="artifactory_oss" />
-      <option name="name" value="artifactory_oss" />
-      <option name="url" value="http://jfrog.fangstar.com/artifactory/global_maven/" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="maven" />
-      <option name="name" value="maven" />
-      <option name="url" value="https://jitpack.io" />
+      <option name="url" value="file:/$PROJECT_DIR$/build/.m2/repository/" />
     </remote-repository>
   </component>
 </project>

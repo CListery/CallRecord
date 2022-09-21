@@ -4,7 +4,8 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.Environment
-import com.yh.appbasic.logger.ext.libE
+import com.yh.appbasic.logger.logE
+import com.yh.appbasic.share.AppBasicShare
 import com.yh.recordlib.TelephonyCenter
 import com.yh.recordlib.ext.convertBytesToMega
 import com.yh.recordlib.ext.humanReadableByteCount
@@ -125,7 +126,7 @@ object DeviceUtils {
     fun getMemoryInfo(): ArrayList<String> {
         val memoryInfoList = ArrayList<String>()
         val memoryInfo = ActivityManager.MemoryInfo()
-        val activityManager = TelephonyCenter.get().ctx()
+        val activityManager = AppBasicShare.context
             .getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         activityManager.getMemoryInfo(memoryInfo)
         runOnApiAbove(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1, {
@@ -167,7 +168,7 @@ object DeviceUtils {
             
             totRam = value.toLong()
         } catch(e: Exception) {
-            TelephonyCenter.get().libE("getTotalRamForOldApi", throwable = e)
+            logE("getTotalRamForOldApi", throwable = e, loggable = TelephonyCenter.get())
         } finally {
             reader?.close()
         }
