@@ -10,6 +10,7 @@ import android.provider.CallLog
 import android.text.TextUtils
 import androidx.core.app.SafeJobIntentService
 import androidx.core.content.PermissionChecker
+import com.kotlin.runCatchingSafety
 import com.yh.appbasic.logger.*
 import com.yh.appbasic.logger.impl.DiskLogFormatStrategy
 import com.yh.appbasic.share.AppBasicShare
@@ -41,6 +42,19 @@ class SyncCallService : SafeJobIntentService() {
         private const val JOB_ID = 10001
         
         const val SYNC_ALL_RECORD_ID = "sync_all_record_id"
+        
+        /**
+         * 用于优化查询结果的项，优先级从低到高
+         */
+        private val optimizationProjections = arrayOf(
+            "formatted_number",
+            "matched_number",
+            "sub_id",
+            "geocoded_location",
+            "last_modified",
+            "simid",
+            CallLog.Calls.PHONE_ACCOUNT_ID,
+        )
         
         @JvmStatic
         fun makeSyncWork(recordId: String): Intent {
@@ -92,6 +106,9 @@ class SyncCallService : SafeJobIntentService() {
             logE("No permission operator call_log!", loggable = loggable)
             return
         }
+        if (null == TelephonyCenter.get().callsProjections) {
+            initProjections()
+        }
         if (recordId.isEmpty() || SYNC_ALL_RECORD_ID == recordId) {
             syncAllRecord()
         } else {
@@ -99,6 +116,76 @@ class SyncCallService : SafeJobIntentService() {
         }
         logW("All sync job is complete!", loggable = loggable)
         printEnd()
+    }
+    
+    private fun initProjections() {
+        AppBasicShare.context.runCatchingSafety {
+            contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
+                ?.use { callLogClient ->
+                    val sort = CallLog.Calls.DEFAULT_SORT_ORDER
+                    
+                    val tmpProjections: ArrayList<String> = arrayListOf(
+                        CallLog.Calls._ID,
+                        CallLog.Calls.DATE,
+                        CallLog.Calls.DURATION,
+                        CallLog.Calls.TYPE,
+                        CallLog.Calls.NUMBER,
+                    )
+                    tmpProjections.addAll(optimizationProjections)
+    
+                    fun removeProjection(columnName: String): Boolean {
+                        return tmpProjections.removeAll { it.equals(columnName, true) }
+                    }
+    
+                    fun ContentProviderClient.checkerProjections(projections: Array<String>? = null): Array<String>? {
+                        try {
+                            query(
+                                CallLog.Calls.CONTENT_URI.buildUpon()
+                                    .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "1")
+                                    .build(),
+                                projections,
+                                null,
+                                null,
+                                sort
+                            ).use {
+                                return projections
+                            }
+                        } catch (e: Exception) {
+                            logE("initProjections", throwable = e, loggable = loggable)
+                            if (null == projections) {
+                                return checkerProjections(tmpProjections.toTypedArray())
+                            } else {
+                                val message = e.message
+                                if (!message.isNullOrEmpty()) {
+                                    val columnName = if (message.startsWith("Invalid column ")) {
+                                        message.replace("Invalid column ", "")
+                                    } else if (message.startsWith("no such column: ")) {
+                                        message.replace("no such column: ", "")
+                                            .split(" ")
+                                            .firstOrNull()
+                                    } else {
+                                        null
+                                    }
+                                    if (!columnName.isNullOrEmpty()) {
+                                        if (removeProjection(columnName)) {
+                                            return checkerProjections(tmpProjections.toTypedArray())
+                                        }
+                                    }
+                                }
+                                for (op in optimizationProjections) {
+                                    if (removeProjection(op)) {
+                                        return checkerProjections(tmpProjections.toTypedArray())
+                                    }
+                                }
+                                return null
+                            }
+                        }
+                    }
+    
+                    TelephonyCenter.get().callsProjections =
+                        callLogClient.checkerProjections() ?: emptyArray()
+                }
+        }
     }
     
     private fun hasCallLogPermission(): Boolean {
@@ -172,7 +259,7 @@ class SyncCallService : SafeJobIntentService() {
             // close by #parseSystemCallRecords
             val callLogResult = callLogClient.query(
                 CallLog.Calls.CONTENT_URI,
-                null,
+                TelephonyCenter.get().safeProjections(),
                 selection.toString(),
                 args.toArray(arrayOf<String>()),
                 sort
@@ -306,7 +393,7 @@ class SyncCallService : SafeJobIntentService() {
             // close by #parseSystemCallRecords
             val callLogResult = callLogClient.query(
                 CallLog.Calls.CONTENT_URI,
-                null,
+                TelephonyCenter.get().safeProjections(),
                 selection.toString(),
                 args.toArray(arrayOf<String>()),
                 sort
@@ -432,7 +519,7 @@ class SyncCallService : SafeJobIntentService() {
             logI("|| [SYS RECORDS]", loggable = loggable)
             val systemRecords = callLogClient.query(
                 CallLog.Calls.CONTENT_URI,
-                null,
+                TelephonyCenter.get().safeProjections(),
                 selection.toString(),
                 args.toArray(arrayOf<String>()),
                 sort
@@ -472,6 +559,9 @@ class SyncCallService : SafeJobIntentService() {
             logI("|| START_OFFSET: ${(configure.startTimeOffset / 1000)}s", loggable = loggable)
             logI("|| MAX_OFFSET: ${(configure.maxCallTimeOffset / 1000)}s", loggable = loggable)
             logI("|| MIN_OFFSET: ${(configure.minCallTimeOffset / 1000)}s", loggable = loggable)
+            logI("|| DB_PROJECTIONS: ${
+                TelephonyCenter.get().safeProjections()?.joinToString(", ")
+            }", loggable = loggable)
         } catch (e: Exception) {
             logE("printConfigInfo", throwable = e, loggable = loggable)
         }

@@ -24,9 +24,9 @@ import com.android.internal.telephony.ITelephonyRegistry
 import com.yh.appbasic.logger.ILogger
 import com.yh.appbasic.logger.LogOwner
 import com.yh.appbasic.logger.logE
-import com.yh.appinject.InjectHelper
 import com.yh.appbasic.logger.logW
 import com.yh.appbasic.share.AppBasicShare
+import com.yh.appinject.InjectHelper
 import com.yh.recordlib.cons.TelephonyProperties
 import com.yh.recordlib.entity.CallType
 import com.yh.recordlib.inject.IRecordAppInject
@@ -153,6 +153,15 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
     private val mITelephony: ITelephony? by lazy { initITelephony() }
     private val mIPhoneSubInfo: IPhoneSubInfo? by lazy { initIPhoneSubInfo() }
     private val mITelephonyRegister: ITelephonyRegistry? by lazy { initITelephonyRegister() }
+    
+    // packages/providers/ContactsProvider/src/com/android/providers/contacts/CallLogProvider.java
+    var callsProjections: Array<String>? = null
+    fun safeProjections(): Array<String>? {
+        if (callsProjections.isNullOrEmpty()) {
+            return null
+        }
+        return callsProjections
+    }
     
     override fun onCreateLogOwner(logOwner: LogOwner) {
         

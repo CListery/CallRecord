@@ -1,7 +1,6 @@
 package com.yh.recordlib.ext
 
 import android.database.Cursor
-import android.os.Build
 import android.provider.CallLog
 import com.yh.appbasic.logger.logW
 import com.yh.recordlib.TelephonyCenter
@@ -32,7 +31,7 @@ fun Cursor.parseSystemRecord(
     columnIndexDate: Int,
     columnIndexDuration: Int,
     columnIndexType: Int,
-    columnIndexSubscriptionId: Int,
+    subscriptionIdColumnIndexes: Array<Int>,
     numberColumnIndexes: Array<Int>
 ): SystemCallRecord {
     return SystemCallRecord().apply {
@@ -40,10 +39,16 @@ fun Cursor.parseSystemRecord(
         date = get(columnIndexDate, -1L)
         duration = get(columnIndexDuration, -1L)
         type = get(columnIndexType, -1)
-        phoneAccountId = get(columnIndexSubscriptionId, -1)
+        subscriptionIdColumnIndexes.forEach {
+            val subscriptionId = get(it, -1)
+            if (subscriptionId in 0..4) {
+                phoneAccountId = subscriptionId
+                return@forEach
+            }
+        }
         numberColumnIndexes.forEach {
             val tmpNumber = get(it, "")
-            if(tmpNumber.isNotEmpty()) {
+            if (tmpNumber.isNotEmpty()) {
                 phoneNumber = TelephonyCenter.get().filterGarbageInPhoneNumber(tmpNumber)
                 return@forEach
             }
@@ -72,15 +77,10 @@ fun Cursor?.parseSystemCallRecords(
         val columnIndexDuration = result.getColumnIndex(CallLog.Calls.DURATION)
         val columnIndexType = result.getColumnIndex(CallLog.Calls.TYPE)
         
-        val columnIndexSubscriptionId = if(Build.VERSION.SDK_INT >= 21) {
-            result.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_ID)
-        } else {
-            var index = result.getColumnIndex("sub_id")
-            if(-1 == index) {
-                index = result.getColumnIndex("simid")
-            }
-            index
-        }
+        val columnIndexSubscriptionId = result.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_ID)
+        val columnIndexSimId = result.getColumnIndex("simid")
+        val columnIndexSubId = result.getColumnIndex("sub_id")
+        
         val columnIndexNumber = result.getColumnIndex(CallLog.Calls.NUMBER)
         val columnIndexMatchedNumber = result.getColumnIndex("matched_number")
         
@@ -90,7 +90,7 @@ fun Cursor?.parseSystemCallRecords(
                 columnIndexDate,
                 columnIndexDuration,
                 columnIndexType,
-                columnIndexSubscriptionId,
+                arrayOf(columnIndexSubscriptionId, columnIndexSimId, columnIndexSubId),
                 arrayOf(columnIndexNumber, columnIndexMatchedNumber)
             )
             if(sr.phoneNumber.isNotEmpty()) {
