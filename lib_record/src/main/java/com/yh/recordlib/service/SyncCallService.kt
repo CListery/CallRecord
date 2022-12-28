@@ -505,7 +505,14 @@ class SyncCallService : SafeJobIntentService() {
             logI("|| PRODUCT: ${Build.PRODUCT}", loggable = loggable)
             logI("|| MODEL: ${Build.MODEL}", loggable = loggable)
             logI("|| HARDWARE: ${Build.HARDWARE}", loggable = loggable)
-            logI("|| RELEASE: ${Build.VERSION.RELEASE}", loggable = loggable)
+            DeviceUtils
+            logI("|| RELEASE: ".plus(
+                arrayOf(
+                    Build.VERSION.RELEASE,
+                    "(${Build.VERSION.CODENAME})",
+                ).joinToString(" ")
+            ), loggable = loggable)
+            logI("|| SDK_INT: ${Build.VERSION.SDK_INT}", loggable = loggable)
             logI("|| ROOTED: ${DeviceUtils.isDeviceRooted()}", loggable = loggable)
             DeviceUtils.getMemoryInfo().forEach {
                 logI("|| $it", loggable = loggable)
