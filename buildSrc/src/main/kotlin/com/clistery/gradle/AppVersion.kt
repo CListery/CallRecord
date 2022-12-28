@@ -8,6 +8,7 @@ object AppVersion {
         const val appbasic = "2.4.1"
         const val appinject = "1.7.0"
         const val kotlin_realm_ext = "3.2.0"
+        const val streamARL = "1.0.4"
     }
     
     object realm{
@@ -27,7 +28,7 @@ object AppVersion {
     object androidx {
         
         const val coreKtx = "1.3.1"
-        const val appcompat = "1.2.0"
+        const val appcompat = "1.3.0"
         const val legacy = "1.0.0"
     }
     

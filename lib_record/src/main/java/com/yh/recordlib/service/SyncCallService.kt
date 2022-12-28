@@ -105,6 +105,9 @@ class SyncCallService : SafeJobIntentService() {
         return PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(
             applicationContext,
             Manifest.permission.READ_CALL_LOG
+        ) && PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.WRITE_CALL_LOG
         )
     }
     

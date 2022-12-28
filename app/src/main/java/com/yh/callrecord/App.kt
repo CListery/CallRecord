@@ -66,7 +66,9 @@ class App : Application(), IRecordAppInject {
         LibLogger.off()
         
         RealmConfigManager.isEnableUiThreadOption = true
-        
+    }
+    
+    fun initCallRecord() {
         TelephonyCenter.get().register(this)
         TelephonyCenter.get().logOwner.on()
         val dbFileDirName =
@@ -80,29 +82,29 @@ class App : Application(), IRecordAppInject {
             TelephonyCenter.get().setupRecordConfigure(recordConfigure)
             CallRecordController.initialization(recordConfigure)
         }
-
+        
         contentResolver.registerContentObserver(//
             CallLog.Calls.CONTENT_URI,
             true,
-            object : ContentObserver(Handler(Handler.Callback { msg ->
+            object : ContentObserver(Handler { msg ->
                 logD("handleMessage: $msg")
                 true
-            })) {
+            }) {
                 override fun onChange(selfChange: Boolean) {
                     logD("onChange: $selfChange")
                 }
-
+                
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     logD("onChange: $selfChange -> $uri")
                 }
-
+                
                 override fun deliverSelfNotifications(): Boolean {
                     logD("deliverSelfNotifications")
                     return super.deliverSelfNotifications()
                 }
             })
     }
-
+    
     private fun isInAppProcess(ctx: Context?): Boolean {
         if (null == ctx) return false
         val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager

@@ -8,6 +8,7 @@ object AppDependencies {
         const val appbasic = "io.github.clistery:appbasic:${AppVersion.clistery.appbasic}"
         const val appinject = "io.github.clistery:appinject:${AppVersion.clistery.appinject}"
         const val kotlin_realm_ext = "io.github.clistery:kotlin-realm-ext:${AppVersion.clistery.kotlin_realm_ext}"
+        const val streamARL = "io.github.clistery:stream-arl:${AppVersion.clistery.streamARL}"
     }
     
     object realm{

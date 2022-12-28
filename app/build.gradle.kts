@@ -20,6 +20,7 @@ dependencies {
     implementation(AppDependencies.clistery.appbasic)
     implementation(AppDependencies.clistery.appinject)
     implementation(AppDependencies.clistery.kotlin_realm_ext)
+    implementation(AppDependencies.clistery.streamARL)
     //AndLinker
     implementation("com.codezjx.library:andlinker:0.7.1")
     implementation(project(mapOf("path" to ":lib_record")))
