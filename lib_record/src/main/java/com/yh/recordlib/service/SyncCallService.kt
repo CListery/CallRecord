@@ -546,6 +546,7 @@ class SyncCallService : SafeJobIntentService() {
         printConfigInfo()
         printMobileInfo()
         printDeviceInfo()
+        printCustomizeInfo()
     }
     
     private fun printConfigInfo() {
@@ -598,14 +599,13 @@ class SyncCallService : SafeJobIntentService() {
             logI("|| PRODUCT: ${Build.PRODUCT}", loggable = loggable)
             logI("|| MODEL: ${Build.MODEL}", loggable = loggable)
             logI("|| HARDWARE: ${Build.HARDWARE}", loggable = loggable)
-            DeviceUtils
             logI("|| RELEASE: ".plus(
                 arrayOf(
                     Build.VERSION.RELEASE,
                     "(${Build.VERSION.CODENAME})",
+                    Build.VERSION.SDK_INT,
                 ).joinToString(" ")
             ), loggable = loggable)
-            logI("|| SDK_INT: ${Build.VERSION.SDK_INT}", loggable = loggable)
             logI("|| ROOTED: ${DeviceUtils.isDeviceRooted()}", loggable = loggable)
             DeviceUtils.getMemoryInfo().forEach {
                 logI("|| $it", loggable = loggable)
@@ -617,6 +617,18 @@ class SyncCallService : SafeJobIntentService() {
             logE("printDeviceInfo", throwable = e, loggable = loggable)
         }
         logI("===============[END DEVICE INFO]===============", loggable = loggable)
+    }
+    
+    private fun printCustomizeInfo() {
+        val customizeLogs =
+            TelephonyCenter.get().getRecordConfigure().manualSyncCustomizeLogs?.invoke()
+        if (!customizeLogs.isNullOrEmpty()) {
+            logI("==============[START CUSTOMIZE INFO]==============", loggable = loggable)
+            customizeLogs.forEach { (k, v) ->
+                logI("|| $k: $v", loggable = loggable)
+            }
+            logI("===============[END CUSTOMIZE INFO]===============", loggable = loggable)
+        }
     }
     
     private fun printEnd() {

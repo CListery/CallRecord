@@ -8,6 +8,7 @@ import android.os.Handler
 import android.provider.CallLog
 import android.text.TextUtils
 import android.widget.Toast
+import com.kotlin.timeCurSecond
 import com.yh.appbasic.logger.logD
 import com.yh.appbasic.logger.logOwner
 import com.yh.appbasic.logger.logW
@@ -151,7 +152,12 @@ class App : Application(), IRecordAppInject {
             true, { dbFileDirName!! },
             BuildConfig.RECORD_DB_VERSION, { CallRecordDBMigration() },
             com.yh.recordlib.BuildConfig.CALL_RECORD_RETRY_TIME,
-            BuildConfig.MAX_RETRY_SYNC_RECORD_COUNT
+            BuildConfig.MAX_RETRY_SYNC_RECORD_COUNT,
+            manualSyncCustomizeLogs = {
+                mapOf(
+                    "time" to timeCurSecond.toString()
+                )
+            }
         )
     }
 
