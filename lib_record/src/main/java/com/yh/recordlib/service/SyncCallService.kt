@@ -104,6 +104,7 @@ class SyncCallService : SafeJobIntentService() {
         logW("onHandleWork: id:$recordId, manual:$isManualSync", loggable = loggable)
         if (!hasCallLogPermission()) {
             logE("No permission operator call_log!", loggable = loggable)
+            printEnd()
             return
         }
         if (null == TelephonyCenter.get().callsProjections) {
@@ -192,9 +193,6 @@ class SyncCallService : SafeJobIntentService() {
         return PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(
             applicationContext,
             Manifest.permission.READ_CALL_LOG
-        ) && PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.WRITE_CALL_LOG
         )
     }
     
