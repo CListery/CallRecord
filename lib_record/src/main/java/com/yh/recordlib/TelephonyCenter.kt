@@ -100,7 +100,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
             "中国电信", arrayOf(
                 "46003",
                 "46005",
-                "46011"
+                "46011",
             )
         ),
         ChinaMOBILE(
@@ -109,16 +109,17 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
                 "46002",
                 "46004",
                 "46007",
-                "46008"
+                "46008",
             )
         ),
         ChinaUNICOM(
             "中国联通", arrayOf(
                 "46001",
                 "46006",
-                "46009"
+                "46009",
             )
         ),
+        ChinaBroadnet("中移广电", arrayOf("49015")),
         ChinaTieTong("中移铁通", arrayOf("46020")),
         Unknown("未知运营商", arrayOf());
 
