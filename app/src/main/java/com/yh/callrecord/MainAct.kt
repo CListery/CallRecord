@@ -2,13 +2,14 @@ package com.yh.callrecord
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.onClickById
 import android.os.Bundle
-import android.view.View
 import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
 import com.yh.appbasic.logger.logD
 import com.yh.appbasic.logger.logE
 import com.yh.appbasic.logger.logW
+import com.yh.jsonholder.Jackson
 import com.yh.krealmextensions.querySortedAsync
 import com.yh.krealmextensions.save
 import com.yh.recordlib.CallRecordController
@@ -43,23 +44,28 @@ class MainAct : Activity(),
     private val mRecordCallback: IRecordCallback = object : IRecordCallback {
         override fun onRecordIdCreated(callRecord: CallRecord) {
             logD("onRecordIdCreated: $callRecord")
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onRecordIdCreated: $callRecord")
             mLastRecordId = callRecord.recordId
         }
         
         override fun onCallIn(recordId: String) {
             logD("onCallIn: $recordId")
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onCallIn: $recordId")
         }
         
         override fun onCallOut(recordId: String) {
             logD("onCallOut: $recordId")
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onCallOut: $recordId")
         }
         
         override fun onCallEnd(recordId: String) {
             logD("onCallEnd: $recordId")
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onCallEnd: $recordId")
         }
         
         override fun onCallOffHook(recordId: String) {
             logD("onCallOffHook: $recordId")
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onCallOffHook: $recordId")
         }
     }
     
@@ -71,10 +77,12 @@ class MainAct : Activity(),
             
             override fun onSyncSuccess(record: CallRecord) {
                 logW("onSyncSuccess: ${record.recordId}")
+                this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onSyncSuccess: ${record.recordId}")
             }
             
             override fun onSyncFail(record: CallRecord) {
                 logE("onSyncFail: ${record.recordId}")
+                this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onSyncFail: ${record.recordId}")
             }
         }
     }
@@ -100,54 +108,63 @@ class MainAct : Activity(),
             .registerRecordSyncListener(object : ISyncCallback {
                 override fun onSyncSuccess(record: CallRecord) {
                     logD("onSyncSuccess: $record")
+                    this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onSyncSuccess: $record")
                 }
                 
                 override fun onSyncFail(record: CallRecord) {
                     logE("onSyncFail: $record")
+                    this@MainAct.findViewById<TextView>(R.id.mContentTxt).append("onSyncFail: $record")
                 }
             })
         
         mLinker.bind()
         mLinker.setBindCallback(this@MainAct)
         
-        findViewById<View>(R.id.mSyncBtn)?.setOnClickListener {
+        onClickById(R.id.mSyncBtn) {
             SyncCallService.enqueueWorkById(application, SyncCallService.SYNC_ALL_RECORD_ID)
         }
-        findViewById<View>(R.id.mCallBtn)?.setOnClickListener {
-            TelephonyCenter.get()
-                .call(this, "10010", mRecordService, mRecordCallback)
+        onClickById(R.id.mCallBtn) {
+            TelephonyCenter.get().call(this@MainAct, "10010", mRecordService, mRecordCallback)
         }
-        findViewById<View>(R.id.mGetMCCMNC)?.setOnClickListener {
-            logW("-> ${TelephonyCenter.get().getSimOperator().operatorName}", loggable = TelephonyCenter.get())
-            logW("-> ${TelephonyCenter.get().getSimOperator(1).operatorName}", loggable = TelephonyCenter.get())
-            logW("-> ${TelephonyCenter.get().getSimOperator(2).operatorName}", loggable = TelephonyCenter.get())
+        onClickById(R.id.mGetMCCMNC) {
+            logW("-> ${TelephonyCenter.get().getSimOperator()}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getSimOperator(0)}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getSimOperator(1)}", loggable = TelephonyCenter.get())
             logW("-> ${TelephonyCenter.get().getAllSimOperator()}", loggable = TelephonyCenter.get())
             logW("-> ${TelephonyCenter.get().getPhoneNumber()}", loggable = TelephonyCenter.get())
+            logW("-> ${TelephonyCenter.get().getPhoneNumber(0)}", loggable = TelephonyCenter.get())
             logW("-> ${TelephonyCenter.get().getPhoneNumber(1)}", loggable = TelephonyCenter.get())
-            logW("-> ${TelephonyCenter.get().getPhoneNumber(2)}", loggable = TelephonyCenter.get())
-            logW("-> ${TelephonyCenter.get().getIccSerialNumber()}", loggable = TelephonyCenter.get())
-            logW("-> ${TelephonyCenter.get().getIccSerialNumber(1)}", loggable = TelephonyCenter.get())
-            logW("-> ${TelephonyCenter.get().getIccSerialNumber(2)}", loggable = TelephonyCenter.get())
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).text = """
+                        |SimOperator = ${TelephonyCenter.get().getSimOperator()}
+                        |SimOperator[1] = ${TelephonyCenter.get().getSimOperator(0)}
+                        |SimOperator[2] = ${TelephonyCenter.get().getSimOperator(1)}
+                        |AllSimOperator = ${TelephonyCenter.get().getAllSimOperator()}
+                        |PhoneNumber = ${TelephonyCenter.get().getPhoneNumber()}
+                        |PhoneNumber[1] = ${TelephonyCenter.get().getPhoneNumber(0)}
+                        |PhoneNumber[2] = ${TelephonyCenter.get().getPhoneNumber(1)}
+                    """.trimMargin()
         }
-        findViewById<View>(R.id.mGetLastRecord)?.setOnClickListener {
+        onClickById(R.id.mGetLastRecord) {
             querySortedAsync<CallRecord>({
                 logD("queryLastRecord: ${it.size}")
                 val lastCR = it.firstOrNull()
                 logD("queryLastRecord: $lastCR")
                 lastCR?.apply {
-                    findViewById<View>(R.id.mRecordLayout).visibility = View.VISIBLE
-                    findViewById<TextView>(R.id.mMobileTxt).text = "Mobile: $phoneNumber"
-                    findViewById<TextView>(R.id.mDurationTxt).text = "Duration: $duration"
-                    findViewById<TextView>(R.id.mCallTimeTxt).text = "CallTime: ${SimpleDateFormat("yyyy.M.d HH:mm", Locale.CHINESE).format(callStartTime)}"
-                    findViewById<TextView>(R.id.mSyncTxt).text = "Synced: $synced"
-                    findViewById<TextView>(R.id.mSubIdTxt).text = "SubId: $phoneAccountId\nMccMnc: $mccMnc"
+                    this@MainAct.findViewById<TextView>(R.id.mContentTxt).text = """
+                        |Mobile: $phoneNumber
+                        |Duration: $duration
+                        |CallTime: ${SimpleDateFormat("yyyy.M.d HH:mm", Locale.CHINESE).format(callStartTime)}
+                        |Synced: $synced
+                        |SubId: $phoneAccountId
+                        |MccMnc: $mccMnc
+                    """.trimMargin()
                 }
                     ?: apply {
-                        findViewById<View>(R.id.mRecordLayout).visibility = View.GONE
+                        this@MainAct.findViewById<TextView>(R.id.mContentTxt).text = "NOT FOUND"
                     }
             }, "callStartTime", Sort.DESCENDING)
         }
-        findViewById<View>(R.id.mManualSync)?.setOnClickListener {
+        onClickById(R.id.mManualSync) {
             CallRecordController.get().registerRecordSyncListener(mManualSyncListener)
             val record = CallRecord()
             record.recordId = UUID.randomUUID().toString().replace("-", "")
@@ -160,6 +177,11 @@ class MainAct : Activity(),
                 Thread.sleep(500)
                 CallRecordController.get().manualSyncRecord(record)
             }
+        }
+        onClickById(R.id.mNewAPI) {
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).text = Jackson.asPrint(
+                TelephonyCenter.get().allSubInfo
+            )
         }
     }
     

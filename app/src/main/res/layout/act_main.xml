@@ -34,41 +34,24 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="Manual Sync"/>
-    
-    <LinearLayout
-        android:id="@+id/mRecordLayout"
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/mNewAPI"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="10dp"
+        android:text="New API"/>
+    
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:background="#efefef"
-        android:orientation="vertical"
-        android:padding="10dp"
-        android:visibility="gone">
+        android:padding="10dp">
         <TextView
-            android:id="@+id/mMobileTxt"
-            android:layout_width="wrap_content"
+            android:id="@+id/mContentTxt"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             tools:text="Mobile: 12312312"/>
-        <TextView
-            android:id="@+id/mDurationTxt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Duration: 12"/>
-        <TextView
-            android:id="@+id/mCallTimeTxt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="CallTime: 2019.1.1 11:22"/>
-        <TextView
-            android:id="@+id/mSyncTxt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Synced: FALSE"/>
-        <TextView
-            android:id="@+id/mSubIdTxt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="SubId: 0"/>
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
     
 </LinearLayout>

@@ -25,6 +25,8 @@ class WelcomeAct : AppCompatActivity() {
                     Manifest.permission.WRITE_CALL_LOG,
                     Manifest.permission.CALL_PHONE,
                     Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_PHONE_STATE,
                 )
             )
             .checker { value -> value?.all { it.value } ?: false }

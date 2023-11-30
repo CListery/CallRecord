@@ -26,21 +26,6 @@ android {
     }
 }
 
-val getSDK19LayoutLibPath = arrayOf(
-    // "${android.sdkDirectory.absolutePath}/platforms/${android.compileSdkVersion}/data/layoutlib.jar"
-    
-    // "${android.sdkDirectory.absolutePath}/platforms/android-19/data/layoutlib.jar",
-    // "${android.sdkDirectory.absolutePath}/platforms/android-20/data/layoutlib.jar",
-    // "${android.sdkDirectory.absolutePath}/platforms/android-21/data/layoutlib.jar",
-    // "${android.sdkDirectory.absolutePath}/platforms/android-22/data/layoutlib.jar",
-    // "${android.sdkDirectory.absolutePath}/platforms/android-23/data/layoutlib.jar",
-    // "${android.sdkDirectory.absolutePath}/platforms/android-24/data/layoutlib.jar",
-    "${android.sdkDirectory.absolutePath}/platforms/android-25/data/layoutlib.jar"
-    // "${android.sdkDirectory.absolutePath}/platforms/android-26/data/layoutlib.jar",
-    // "${android.sdkDirectory.absolutePath}/platforms/android-27/data/layoutlib.jar",
-    // "${android.sdkDirectory.absolutePath}/platforms/android-28/data/layoutlib.jar"
-)
-
 dependencies {
     AppDependencies.baseLibs.forEach { implementation(it) }
     implementation(AppDependencies.androidx.legacy)
@@ -52,6 +37,4 @@ dependencies {
     implementation("io.reactivex.rxjava2:rxandroid:2.1.0")
     //AndLinker
     implementation("com.codezjx.library:andlinker:0.7.1")
-    
-    getSDK19LayoutLibPath.forEach { compileOnly(files(it)) }
 }

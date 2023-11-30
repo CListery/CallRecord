@@ -21,6 +21,7 @@ dependencies {
     implementation(AppDependencies.clistery.appinject)
     implementation(AppDependencies.clistery.kotlin_realm_ext)
     implementation(AppDependencies.clistery.streamARL)
+    implementation("com.clistery.app:jsonholder:1.1.0")
     //AndLinker
     implementation("com.codezjx.library:andlinker:0.7.1")
     implementation(project(mapOf("path" to ":lib_record")))

@@ -580,14 +580,9 @@ class SyncCallService : SafeJobIntentService() {
         try {
             logI("|| ALL_OPERATOR: ${TelephonyCenter.get().getAllSimOperator()}",
                 loggable = loggable)
-            logI("|| MULTI_CONFIG: ${TelephonyCenter.get().getMultiSimConfiguration().name}",
-                loggable = loggable)
             logI("|| PN0: ${TelephonyCenter.get().getPhoneNumber()}", loggable = loggable)
-            logI("|| PN1: ${TelephonyCenter.get().getPhoneNumber(1)}", loggable = loggable)
-            logI("|| PN2: ${TelephonyCenter.get().getPhoneNumber(2)}", loggable = loggable)
-            logI("|| ISN0: ${TelephonyCenter.get().getIccSerialNumber()}", loggable = loggable)
-            logI("|| ISN1: ${TelephonyCenter.get().getIccSerialNumber(1)}", loggable = loggable)
-            logI("|| ISN2: ${TelephonyCenter.get().getIccSerialNumber(2)}", loggable = loggable)
+            logI("|| PN1: ${TelephonyCenter.get().getPhoneNumber(0)}", loggable = loggable)
+            logI("|| PN2: ${TelephonyCenter.get().getPhoneNumber(1)}", loggable = loggable)
         } catch (e: Exception) {
             logE("printMobileInfo", throwable = e, loggable = loggable)
         }
