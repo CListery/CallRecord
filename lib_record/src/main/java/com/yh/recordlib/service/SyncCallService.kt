@@ -121,71 +121,76 @@ class SyncCallService : SafeJobIntentService() {
     
     private fun initProjections() {
         AppBasicShare.context.runCatchingSafety {
-            contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
-                ?.use { callLogClient ->
-                    val sort = CallLog.Calls.DEFAULT_SORT_ORDER
-                    
-                    val tmpProjections: ArrayList<String> = arrayListOf(
-                        CallLog.Calls._ID,
-                        CallLog.Calls.DATE,
-                        CallLog.Calls.DURATION,
-                        CallLog.Calls.TYPE,
-                        CallLog.Calls.NUMBER,
-                    )
-                    tmpProjections.addAll(optimizationProjections)
-    
-                    fun removeProjection(columnName: String): Boolean {
-                        return tmpProjections.removeAll { it.equals(columnName, true) }
-                    }
-    
-                    fun ContentProviderClient.checkerProjections(projections: Array<String>? = null): Array<String>? {
-                        try {
-                            query(
-                                CallLog.Calls.CONTENT_URI.buildUpon()
-                                    .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "1")
-                                    .build(),
-                                projections,
-                                null,
-                                null,
-                                sort
-                            ).use {
-                                return projections
-                            }
-                        } catch (e: Exception) {
-                            logE("initProjections", throwable = e, loggable = loggable)
-                            if (null == projections) {
-                                return checkerProjections(tmpProjections.toTypedArray())
-                            } else {
-                                val message = e.message
-                                if (!message.isNullOrEmpty()) {
-                                    val columnName = if (message.startsWith("Invalid column ")) {
-                                        message.replace("Invalid column ", "")
-                                    } else if (message.startsWith("no such column: ")) {
-                                        message.replace("no such column: ", "")
-                                            .split(" ")
-                                            .firstOrNull()
-                                    } else {
-                                        null
-                                    }
-                                    if (!columnName.isNullOrEmpty()) {
-                                        if (removeProjection(columnName)) {
-                                            return checkerProjections(tmpProjections.toTypedArray())
-                                        }
-                                    }
+            val callLogClient = contentResolver.acquireUnstableContentProviderClient(CallLog.Calls.CONTENT_URI)
+            callLogClient?.runCatchingSafety {
+                val sort = CallLog.Calls.DEFAULT_SORT_ORDER
+                
+                val tmpProjections: ArrayList<String> = arrayListOf(
+                    CallLog.Calls._ID,
+                    CallLog.Calls.DATE,
+                    CallLog.Calls.DURATION,
+                    CallLog.Calls.TYPE,
+                    CallLog.Calls.NUMBER,
+                )
+                tmpProjections.addAll(optimizationProjections)
+                
+                fun removeProjection(columnName: String): Boolean {
+                    return tmpProjections.removeAll { it.equals(columnName, true) }
+                }
+                
+                fun ContentProviderClient.checkerProjections(projections: Array<String>? = null): Array<String>? {
+                    try {
+                        query(
+                            CallLog.Calls.CONTENT_URI.buildUpon()
+                                .appendQueryParameter(CallLog.Calls.LIMIT_PARAM_KEY, "1")
+                                .build(),
+                            projections,
+                            null,
+                            null,
+                            sort
+                        ).use {
+                            return projections
+                        }
+                    } catch(e: Exception) {
+                        logE("initProjections", throwable = e, loggable = loggable)
+                        if(null == projections) {
+                            return checkerProjections(tmpProjections.toTypedArray())
+                        } else {
+                            val message = e.message
+                            if(!message.isNullOrEmpty()) {
+                                val columnName = if(message.startsWith("Invalid column ")) {
+                                    message.replace("Invalid column ", "")
+                                } else if(message.startsWith("no such column: ")) {
+                                    message.replace("no such column: ", "")
+                                        .split(" ")
+                                        .firstOrNull()
+                                } else {
+                                    null
                                 }
-                                for (op in optimizationProjections) {
-                                    if (removeProjection(op)) {
+                                if(!columnName.isNullOrEmpty()) {
+                                    if(removeProjection(columnName)) {
                                         return checkerProjections(tmpProjections.toTypedArray())
                                     }
                                 }
-                                return null
                             }
+                            for(op in optimizationProjections) {
+                                if(removeProjection(op)) {
+                                    return checkerProjections(tmpProjections.toTypedArray())
+                                }
+                            }
+                            return null
                         }
                     }
-    
-                    TelephonyCenter.get().callsProjections =
-                        callLogClient.checkerProjections() ?: emptyArray()
                 }
+                
+                TelephonyCenter.get().callsProjections = callLogClient.checkerProjections() ?: emptyArray()
+                if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+                    @Suppress("DEPRECATION")
+                    callLogClient.release()
+                } else {
+                    callLogClient.close()
+                }
+            }
         }
     }
     
