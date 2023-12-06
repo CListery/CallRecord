@@ -27,6 +27,7 @@ import com.yh.recordlib.ext.parseSystemCallRecords
 import com.yh.recordlib.notifier.RecordSyncNotifier
 import com.yh.recordlib.utils.DeviceUtils
 import com.yh.recordlib.utils.RecordFilter.findMappingRecords
+import org.json.JSONObject
 import kotlin.math.max
 
 /**
@@ -548,6 +549,7 @@ class SyncCallService : SafeJobIntentService() {
     private fun printOtherInfo() {
         printConfigInfo()
         printMobileInfo()
+        printSubscriptionInfo()
         printDeviceInfo()
         printCustomizeInfo()
     }
@@ -587,6 +589,26 @@ class SyncCallService : SafeJobIntentService() {
             logE("printMobileInfo", throwable = e, loggable = loggable)
         }
         logI("===============[END MOBILE INFO]===============", loggable = loggable)
+    }
+    
+    private fun printSubscriptionInfo(){
+        logI("==============[START SUBSCRIPTION INFO]==============", loggable = loggable)
+        try {
+            TelephonyCenter.get().allSubInfo.forEach {
+                logI("|| SLOT: ${it.slotId}")
+                logI("|| NUMBER: ${it.number}")
+                logI("|| MCC: ${it.mcc}")
+                logI("|| MNC: ${it.mnc}")
+                logI("|| SUBID: ${it.subId}")
+                logI("|| CARRIER: ${it.carrier}")
+                logI("|| ICCID: ${it.iccId}")
+                logI("|| DISPLAY_NAME: ${it.displayName}")
+                logI("|| OTHER: ${JSONObject(it.other).toString(4)}")
+            }
+        } catch (e: Exception) {
+            logE("printSubscriptionInfo", throwable = e, loggable = loggable)
+        }
+        logI("===============[END SUBSCRIPTION INFO]===============", loggable = loggable)
     }
     
     private fun printDeviceInfo() {
