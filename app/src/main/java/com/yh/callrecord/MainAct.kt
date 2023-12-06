@@ -3,6 +3,7 @@ package com.yh.callrecord
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.onClickById
+import android.os.Build
 import android.os.Bundle
 import android.widget.TextView
 import com.codezjx.andlinker.AndLinker
@@ -179,7 +180,7 @@ class MainAct : Activity(),
             }
         }
         onClickById(R.id.mNewAPI) {
-            this@MainAct.findViewById<TextView>(R.id.mContentTxt).text = Jackson.asPrint(
+            this@MainAct.findViewById<TextView>(R.id.mContentTxt).text = "SDK: ${Build.VERSION.SDK_INT}\n" + Jackson.asPrint(
                 TelephonyCenter.get().allSubInfo
             )
         }

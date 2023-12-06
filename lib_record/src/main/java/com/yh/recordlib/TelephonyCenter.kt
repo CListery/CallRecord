@@ -144,7 +144,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
         companion object {
             
             fun from(clazz: Class<*>, data: Any?): SubInfo {
-                var number = clazz.safeFieldGet<Any>("number", data).toString()
+                var number = clazz.safeFieldGet<Any>("number", data).toString().safeGet()
                 if(number.length > 11) {
                     number = get().filterGarbageInPhoneNumber(number)
                     if(number.length > 11) {
@@ -153,13 +153,13 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
                 }
                 
                 return SubInfo(
-                    displayName = clazz.safeFieldGet<Any>("displayName", data).toString(),
-                    iccId = clazz.safeFieldGet<Any>("iccId", data).toString(),
+                    displayName = clazz.safeFieldGet<Any>("displayName", data).toString().safeGet(),
+                    iccId = clazz.safeFieldGet<Any>("iccId", data).toString().safeGet(),
                     number = number,
-                    subId = clazz.safeFieldGet<Any>("subId", data).toString().toInt(),
-                    mcc = clazz.safeFieldGet<Any>("mcc", data).toString(),
-                    mnc = clazz.safeFieldGet<Any>("mnc", data).toString(),
-                    slotId = clazz.safeFieldGet<Any>("slotId", data).toString().toInt(),
+                    subId = clazz.safeFieldGet<Any>("subId", data).toString().toInt().safeGet(),
+                    mcc = clazz.safeFieldGet<Any>("mcc", data).toString().safeGet(),
+                    mnc = clazz.safeFieldGet<Any>("mnc", data).toString().safeGet(),
+                    slotId = clazz.safeFieldGet<Any>("slotId", data).toString().toInt().safeGet(),
                     other = clazz.declaredFields.filterNot { it.name == "CREATOR" }.associate {
                         it.name to it.safeGet<Any>(data)
                     }
@@ -178,16 +178,18 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
                         .runCatchingSafety { invoke(data) }
                         .getOrNull()
                         .toString()
+                        .safeGet()
                     mnc = cSubscriptionInfo.getDeclaredMethod("getMncString")
                         .runCatchingSafety { invoke(data) }
                         .getOrNull()
                         .toString()
+                        .safeGet()
                 }, otherwise = @Suppress("DEPRECATION") {
-                    mcc = data.mcc.toString()
-                    mnc = data.mnc.toString()
+                    mcc = data.mcc.toString().safeGet()
+                    mnc = data.mnc.toString().safeGet()
                 })
                 
-                var number = data.number
+                var number = data.number.safeGet()
                 if(number.length > 11) {
                     number = get().filterGarbageInPhoneNumber(number)
                     if(number.length > 11) {
@@ -196,13 +198,13 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
                 }
                 
                 return SubInfo(
-                    displayName = data.displayName.toString(),
-                    iccId = data.iccId,
+                    displayName = data.displayName.toString().safeGet(),
+                    iccId = data.iccId.safeGet(),
                     number = number,
-                    subId = data.subscriptionId,
+                    subId = data.subscriptionId.safeGet(),
                     mcc = mcc,
                     mnc = mnc,
-                    carrier = data.carrierName.toString(),
+                    carrier = data.carrierName.toString().safeGet(),
                     slotId = data.simSlotIndex,
                     other = cSubscriptionInfo.declaredMethods.filterNot {
                         it.name in arrayOf(
@@ -237,7 +239,7 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
     
     override fun init() {
         // initNotification()
-        thread { allSubInfo.size }
+        // thread { allSubInfo.size }
     }
     
     private fun getAllSubInfoList(context: Context): List<SubInfo> {
