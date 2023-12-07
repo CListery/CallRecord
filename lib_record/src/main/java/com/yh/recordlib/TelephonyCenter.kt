@@ -1,7 +1,6 @@
 package com.yh.recordlib
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -33,7 +32,6 @@ import com.yh.recordlib.inject.IRecordAppInject
 import com.yh.recordlib.ipc.IRecordCallback
 import com.yh.recordlib.ipc.IRecordService
 import com.yh.recordlib.utils.isMIUI
-import kotlin.concurrent.thread
 
 /**
  * Created by CYH on 2019-06-03 10:09
@@ -242,29 +240,35 @@ class TelephonyCenter private constructor() : InjectHelper<IRecordAppInject>(), 
         // thread { allSubInfo.size }
     }
     
-    private fun getAllSubInfoList(context: Context): List<SubInfo> {
-        return if(Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
-            val subscriptionManager = context.getSystemService<SubscriptionManager>()!!
-            val activeSubscriptionInfoList = run {
-                val cSubscriptionManager = Class.forName("android.telephony.SubscriptionManager")
-                val mGetAllSubscriptionInfoList = cSubscriptionManager.getDeclaredMethod("getActiveSubscriptionInfoList")
-                mGetAllSubscriptionInfoList.invoke(subscriptionManager) as List<*>
-            }.filterIsInstance<SubscriptionInfo>()
-            
-            activeSubscriptionInfoList.map { subInfo ->
-                SubInfo.from(subInfo)
+    private fun getAllSubInfoList(context: Context): List<SubInfo> =
+        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
+            runCatchingSafety {
+                val subscriptionManager = context.getSystemService<SubscriptionManager>()!!
+                val activeSubscriptionInfoList = run {
+                    val cSubscriptionManager = Class.forName("android.telephony.SubscriptionManager")
+                    val mGetAllSubscriptionInfoList = cSubscriptionManager.getDeclaredMethod("getActiveSubscriptionInfoList")
+                    mGetAllSubscriptionInfoList.invoke(subscriptionManager) as? List<*>
+                }?.filterIsInstance<SubscriptionInfo>()
+                
+                activeSubscriptionInfoList?.map { subInfo ->
+                    SubInfo.from(subInfo)
+                }
             }
         } else {
-            val cSubscriptionManager = Class.forName("android.telephony.SubscriptionManager")
-            val mGetAllSubInfoList = cSubscriptionManager.getDeclaredMethod("getActiveSubInfoList")
-            val allSubInfoList = mGetAllSubInfoList.invoke(null) as List<*>
-            val cSubInfoRecord = Class.forName("android.telephony.SubInfoRecord")
-            
-            allSubInfoList.filterIsInstance(cSubInfoRecord).map { subInfo ->
-                SubInfo.from(cSubInfoRecord, subInfo)
+            runCatchingSafety {
+                val cSubInfoRecord = Class.forName("android.telephony.SubInfoRecord")
+                val allSubInfoList = run {
+                    val cSubscriptionManager = Class.forName("android.telephony.SubscriptionManager")
+                    val mGetAllSubInfoList = cSubscriptionManager.getDeclaredMethod("getActiveSubInfoList")
+                    mGetAllSubInfoList.invoke(null) as? List<*>
+                }?.filterIsInstance(cSubInfoRecord)
+                
+                allSubInfoList?.map { subInfo ->
+                    SubInfo.from(cSubInfoRecord, subInfo)
+                }
             }
-        }
-    }
+        }.getOrNull()
+            ?: emptyList()
     
     private fun initNotification() {
         val context = AppBasicShare.context
